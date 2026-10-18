@@ -1,3 +1,5 @@
+![Datanautas — Evasão no Ensino Superior](assets/banner_datanautas.png)
+
 # datanauts - projeto para o Impacta.Dev
 
 O desafio é propor uma solução viável para o problema da **evasão nos cursos superiores** baseada em dados. 
