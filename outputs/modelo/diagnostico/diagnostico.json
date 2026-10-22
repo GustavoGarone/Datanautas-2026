@@ -1,0 +1,27 @@
+{
+  "id": "Modelo atual",
+  "validacao_reservada": false,
+  "n": 211651,
+  "B": 500,
+  "semente": 20261021,
+  "erro_quadratura": 2.7755575615628914e-15,
+  "n_Pearson": 209958,
+  "n_deterministico_N1": 1693,
+  "suporte": "0,...,N-1",
+  "hessiana_inferencia": false,
+  "selecao": false,
+  "revisao_visual_pendente": false,
+  "resposta": "desvinculados + trancados",
+  "modelo_md5": "b0ccba60886d06688237d0a3c1f5da16",
+  "codigo": [
+    "8ec888e17696212297b19545b11f6d63",
+    "0f7bf9e05a12bc62b0c3fc13ac41a612"
+  ],
+  "nota": "Triagem descritiva, sem incerteza dos modos; truncagem condicional aos RE, N1 preservados mas sem variância; fronteira por construção não valida modelo; não corrige toda a seleção",
+  "revisao_visual": {
+    "data": "2026-10-22",
+    "QQ_residuos_worm": true,
+    "parecer": "Worm-plots mostram desvios de forma e caudas; diagnostico nao plenamente satisfatorio; manter Hessiana e selecao suspensas",
+    "modelo_alterado": false
+  }
+}

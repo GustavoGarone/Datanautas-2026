@@ -1,17 +1,40 @@
-![Datanautas — Evasão no Ensino Superior](assets/banner_datanautas.png)
+![Datanautas](assets/banner_datanautas.png)
 
-# datanauts - projeto para o Impacta.Dev
+# Datanautas — Impacta.dev 2026
 
-O desafio é propor uma solução viável para o problema da **evasão nos cursos superiores** baseada em dados. 
+Associações entre características dos cursos, composição dos matriculados e
+proporção anual de **desvínculo ou trancamento**, Brasil, 2020–2024.
+Dados agregados por curso-ano; não permitem inferir risco individual ou causalidade.
 
-# Abordagem
+O candidato atual é uma beta-binomial truncada em Y<N, com interceptos de IES
+e curso, controles estruturais, perfis dos matriculados, contexto institucional
+e dispersão por ano, modalidade e porte. Validação interna melhora a avaliação
+de dispersão, mas worm-plots mostram desvios de forma e caudas. **Estabilidade numérica e inferência
+permanecem pendentes**; não houve Hessiana populacional nem seleção nesta rodada.
 
-Utilizamos as linguagens _Python_ e _R_, além de pacotes específicos para manipular o grande volume de dados (como DuckDB, Polars e Arrow) disponibilizados no formato **.csv** e **.parquet**. Após inspeção inicial e devida análise exploratória, propomos um modelo de regressão XXX para avaliar como um certo conjunto de covariáveis (as significativas) impacta as taxas de interesse (taxa de desvínculo, taxa de trancamento, taxa de conclusão anual...). Um diagnóstico do modelo é feito para garantir sua adequação aos dados.
+## Consultar
 
-# Interpretação
+- [Relatório atual e limitações](outputs/modelo/relatorio.md).
+- [QQ em pontos](outputs/modelo/validacao/graficos/QQ_uniforme.png), [resíduos](outputs/modelo/validacao/graficos/residuos.png) e [worm-plots](outputs/modelo/validacao/graficos/worm_modalidade_porte.png).
+- [Modelos salvos](outputs/modelo/modelos/), [verificação](outputs/modelo/verificacao.json) e [proveniência](outputs/modelo/manifesto.json).
+- [Métodos e reprodução](docs/metodologia.md), [histórico resumido](docs/historico.md), [decisões vigentes](AGENTS.md) e [uso de IA](docs/registro_uso_ia_modelagem.md).
 
-Construímos e interpretamos as estimativas intervalares para cada parâmetro e obtemos conclusões práticas a partir delas, que devem nos orientar na direção da resolução do problema em questão.
+## Executar
 
-# Proposta
+Dependências declaradas em `flake.nix` e fixadas em `flake.lock`.
+**Nunca instalar imperativamente.** Na raiz:
 
-Dadas as interpretações realistas e fundamentadas em dados, consideramos propostas que visem mitigar os efeitos negativos detectados sobre algumas covariáveis ou, ainda, potencializar os efeitos positivos gerados por outras.
+```sh
+nix develop path:. -c bash scripts/modelo/run.sh verificar
+nix develop path:. -c bash scripts/modelo/run.sh graficos
+nix develop path:. -c bash scripts/modelo/run.sh reproduzir
+```
+
+`verificar` confere os artefatos sem reotimizar. `graficos` regenera simulações,
+tabelas e PNG dos modelos salvos. `reproduzir` também prepara os dados e ajusta
+modelos ausentes; `reajustar` força nova otimização. Mais opções na metodologia.
+
+Dados originais, PDFs de referência, notebooks e entregas anteriores preservados.
+Modelos descartados estão documentados somente no resumo histórico. Base derivada
+e cache são regeneráveis e ignorados pelo Git. Apresentação e intervenção ficam
+para uma etapa posterior.

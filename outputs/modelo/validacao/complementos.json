@@ -1,0 +1,19 @@
+{
+  "status": "complementos_calculados_revisao_pendente",
+  "id": "Modelo atual",
+  "n": 47477,
+  "B": 500,
+  "semente": 20261324,
+  "momentos_lote_independente": true,
+  "Pearson2": 1.0635306542855534,
+  "zeros_esperados": 1984.8423171345219,
+  "erro_MC_soma_zeros": 0.36576434288489318,
+  "mesmo_modelo": true,
+  "hessiana_populacional": false,
+  "selecao": false,
+  "gradiente_treino": 64.664536774798762,
+  "revisao_visual_pendente": false,
+  "treino_md5": "8f04a2f39beb00ad154f0559d4420452",
+  "codigo": "11917ce56ca64cc4be5991f4fad194a6",
+  "nota": "Auditorias descritivas; nao usar reserva para nova busca de especificacoes"
+}

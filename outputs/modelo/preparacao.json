@@ -1,0 +1,33 @@
+{
+  "entrada": {
+    "raw": "fb7573b81d5f515c6a07d8b1aeb2e299",
+    "codigo": "9e9bfd7a993ef7ae67f65eb35a3d04bd",
+    "escalas": {
+      "p_feminino": 0.10000000000000001,
+      "p_ppi": 0.10000000000000001,
+      "p_25_anos_ou_mais": 0.10000000000000001,
+      "p_escola_publica": 0.10000000000000001,
+      "p_deficiencia": 0.01,
+      "p_reserva_vagas": 0.10000000000000001,
+      "p_noturno": 0.10000000000000001
+    },
+    "referencias": {
+      "ano": "2020",
+      "modalidade": "Presencial",
+      "categoria_administrativa": "Privada com fins lucrativos",
+      "organizacao_academica": "Universidade",
+      "grau_academico": "Bacharelado",
+      "cine_area_geral": "04"
+    }
+  },
+  "base": "8e797a430f6152dc9b3f2dfa454a8b0e",
+  "original": 220686,
+  "excluidos_matriculas_zero": 9035,
+  "n": 211651,
+  "cursos": 51603,
+  "IES": 2936,
+  "treino": 164174,
+  "reserva": 47477,
+  "N1": 1693,
+  "cursos_mudam_IES": 431
+}

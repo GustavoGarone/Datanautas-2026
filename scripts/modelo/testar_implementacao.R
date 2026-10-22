@@ -1,0 +1,57 @@
+source("scripts/modelo/common.R")
+OUT<-file.path(CACHE,"testes");dir.create(file.path(OUT,"tabelas"),recursive=TRUE,showWarnings=FALSE)
+trunc_compile()
+grid<-CJ(N=c(1L,2L,3L,9L,30L),mu=c(.001,.1,.5,.9,.999),phi=c(.05,1,10,1e5))
+checks<-rbindlist(lapply(seq_len(nrow(grid)),function(i) {
+  z<-grid[i];y<-0:(z$N-1L);p<-trunc_density(y,z$N,z$mu,z$phi)
+  mm<-trunc_moments(z$mu,z$phi,z$N)
+  data.table(z,erro_soma=abs(sum(p)-1),erro_media=abs(sum(y/z$N*p)-mm$mean),
+    erro_segundo=abs(sum((y/z$N)^2*p)-mm$second))
+}))
+fwrite(checks,file.path(OUT,"tabelas/normalizacao_momentos.csv"))
+stopifnot(max(checks$erro_soma)<1e-6,max(checks$erro_media)<1e-6,max(checks$erro_segundo)<1e-6)
+set.seed(SEED)
+sim<-rbindlist(lapply(list(c(1,.4,2),c(2,.8,.1),c(9,.6,3),c(30,.1,20)),function(z){
+  n<-100000L;N<-rep(z[1],n);mu<-rep(z[2],n);phi<-rep(z[3],n)
+  y<-trunc_draw(mu,phi,N);mm<-trunc_moments(z[2],z[3],z[1])
+  data.table(N=z[1],mu=z[2],phi=z[3],media=mean(y/z[1]),media_teorica=mm$mean,
+    se_media=sqrt(max(0,mm$second-mm$mean^2)/n),maximo=max(y),
+    zero_sim=mean(y==0),zero_teorico=trunc_density(0,z[1],z[2],z[3]))
+}))
+fwrite(sim,file.path(OUT,"tabelas/simulador.csv"))
+stopifnot(all(sim$maximo<sim$N),all(abs(sim$media-sim$media_teorica)<6*sim$se_media+1e-12))
+# Derivadas da densidade truncada conjunta, incluindo os normalizadores.
+dd<-list(X=matrix(c(1,1,1,1,.2,.5,.7,1),4,2),Z=matrix(1,4,1),
+  y=c(0,0,2,3),N=c(1,2,5,9),ies=c(0L,0L,1L,1L),curso=c(0L,1L,0L,1L),n_ies=2L,upper_truncated=1L)
+pars<-list(beta=c(-1,.3),betadisp=log(3),theta=log(c(.5,.2)),b=c(.1,-.1,.05,-.05))
+obj<-TMB::MakeADFun(dd,pars,DLL=TRUNC_DLL,silent=TRUE)
+p<-obj$par;g<-obj$gr(p);h<-1e-5
+fd<-vapply(seq_along(p),function(j){pp<-pm<-p;pp[j]<-pp[j]+h;pm[j]<-pm[j]-h;(obj$fn(pp)-obj$fn(pm))/(2*h)},numeric(1))
+stopifnot(max(abs(g-fd))<1e-4)
+rp<-obj$report(p)$logprob
+mu<-plogis(drop(dd$X%*%pars$beta)+pars$b[dd$ies+1]+pars$b[dd$n_ies+dd$curso+1])
+stopifnot(max(abs(rp-trunc_density(dd$y,dd$N,mu,exp(pars$betadisp),log=TRUE)))<1e-10)
+only1<-dd;only1$N[]<-1;only1$y[]<-0
+o1<-TMB::MakeADFun(only1,pars,DLL=TRUNC_DLL,silent=TRUE)
+g1<-o1$gr(o1$par)
+stopifnot(all(o1$report(o1$par)$logprob==0),all(abs(g1[names(o1$par)%in%c("beta","betadisp")])<1e-12))
+# Laplace e gradientes: comparação com a implementação glmmTMB, sem Hessiana.
+small<-data.table(ies=factor(rep(1:4,each=30)),curso=factor(rep(1:12,each=10)),N=sample(20:100,120,TRUE))
+bb<-rnorm(4,0,.7)[as.integer(small$ies)]+rnorm(12,0,.4)[as.integer(small$curso)]
+pp<-plogis(-1+bb);small[,y:=rbinom(.N,N,rbeta(.N,pp*10,(1-pp)*10))]
+m<-glmmTMB(cbind(y,N-y)~1+(1|ies)+(1|curso),family=betabinomial(),data=small,se=FALSE)
+ps<-list(beta=unname(fixef(m)$cond),betadisp=unname(fixef(m)$disp),
+  theta=unname(m$fit$par[names(m$fit$par)=="theta"]),b=unname(m$fit$parfull[names(m$fit$parfull)=="b"]))
+ds<-list(X=matrix(1,120,1),Z=matrix(1,120,1),y=small$y,N=small$N,
+  ies=as.integer(small$ies)-1L,curso=as.integer(small$curso)-1L,n_ies=4L,upper_truncated=0L)
+oo<-TMB::MakeADFun(ds,ps,random="b",DLL=TRUNC_DLL,silent=TRUE)
+oe<-abs(oo$fn(oo$par)+as.numeric(logLik(m)))
+ge<-max(abs(oo$gr(oo$par)-m$obj$gr(m$fit$par)))
+stopifnot(oe<1e-5,ge<1e-4)
+write_json(list(status="conferido",grade=nrow(grid),max_erro_normalizacao=max(checks$erro_soma),
+  max_erro_momentos=max(checks$erro_media,checks$erro_segundo),erro_derivada=max(abs(g-fd)),
+  N1_loglik_zero=TRUE,N1_gradiente_beta_phi_zero=TRUE,erro_objetivo_glmmTMB=oe,
+  erro_gradiente_glmmTMB=ge,hessiana_inferencia=FALSE,codigo=tools::md5sum(c(
+    "scripts/modelo/bb_truncada.cpp","scripts/modelo/common.R","scripts/modelo/testar_implementacao.R"))),
+  file.path(OUT,"verificacao.json"))
+log_msg("Implementação truncada conferida; isso não valida o ajuste completo")

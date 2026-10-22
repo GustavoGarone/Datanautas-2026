@@ -1,0 +1,45 @@
+{
+  "status": "validacao_interna_calculada_revisao_pendente",
+  "id": "Modelo atual",
+  "n_treino": 164174,
+  "n_reserva": 47477,
+  "n_Pearson": 47030,
+  "B": 500,
+  "semente": 20261021,
+  "objeto_precisao": "Q_bb latente da densidade conjunta no modo do treino",
+  "erro_fatoracao": 5.1253784923526792e-16,
+  "erro_raiz_amostragem_pequeno": 6.9388939039072284e-18,
+  "hessiana_parametros_populacionais": false,
+  "sdreport": false,
+  "selecao": false,
+  "otimizacao_treino": {
+    "codigo": 0,
+    "controle": {
+      "iter.max": 1500,
+      "eval.max": 2000,
+      "rel.tol": 9.9999999999999995e-08
+    },
+    "max_gradiente_bruto": 64.664536774798762,
+    "validacao_inferencial_concluida": false
+  },
+  "medias_variancias_integradas": true,
+  "covariancias_IES_curso_preservadas": true,
+  "reserva_confirmatoria_intocada": false,
+  "revisao_visual_pendente": false,
+  "modelo_treino_md5": "8f04a2f39beb00ad154f0559d4420452",
+  "modelo_completo_md5": "b0ccba60886d06688237d0a3c1f5da16",
+  "codigo": "4515da6853e5507cdea4d7bca1528401",
+  "limitacoes": [
+    "Respostas reservadas participaram da escolha anterior da especificacao",
+    "Aproximacao normal de Laplace dos efeitos, parametros populacionais fixos",
+    "Momentos e Pearson usam o mesmo lote Monte Carlo; conclusoes limitrofes exigem lote independente",
+    "Sem incerteza populacional; nao avalia novos cursos/IES ou previsao futura",
+    "Uma observacao por par IES/curso elegivel altera ponderacao frente a base completa"
+  ],
+  "revisao_visual": {
+    "data": "2026-10-22",
+    "QQ_residuos_worm": true,
+    "parecer": "Worm-plots mostram desvios de forma e caudas; diagnostico nao plenamente satisfatorio; manter Hessiana e selecao suspensas",
+    "modelo_alterado": false
+  }
+}

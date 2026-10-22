@@ -1,0 +1,7 @@
+.Rhistory
+.RData
+.direnv/
+result
+result-*
+.cache/
+data/processed/

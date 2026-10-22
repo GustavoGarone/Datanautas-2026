@@ -1,0 +1,5 @@
+contexto,estatistica,observado,sim_media,sim_p025,sim_p975
+modos_fixos_treino,Pearson2,1.2135160296268,0.999677406420075,0.98670918895543,1.01190543343466
+modos_fixos_treino,zeros,2519,1898.334,1838.95,1956.575
+latentes_integrados_treino,Pearson2,1.06284553255609,0.999962107939889,0.987924371355026,1.01225047548662
+latentes_integrados_treino,zeros,2519,1983.38,1923,2047

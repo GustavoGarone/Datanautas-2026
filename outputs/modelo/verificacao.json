@@ -1,0 +1,55 @@
+{
+  "status": "conferencia_computacional_concluida",
+  "conferencias": {
+    "diagnostico": {
+      "n": 211651,
+      "N1": 1693,
+      "contextos": ["condicional", "parcial_IES_fixa", "marginal"],
+      "momentos_Pearson_QQ_calibracao_worm_conferidos": true
+    },
+    "validacao": {
+      "n": 47477,
+      "N1": 447,
+      "contextos": ["modos_fixos_treino", "latentes_integrados_treino"],
+      "momentos_Pearson_QQ_calibracao_worm_conferidos": true
+    }
+  },
+  "implementacao": {
+    "status": "conferido",
+    "grade": 100,
+    "max_erro_normalizacao": 3.0479063717336885e-11,
+    "max_erro_momentos": 2.7244873024301342e-11,
+    "erro_derivada": 1.6862333751532788e-10,
+    "N1_loglik_zero": true,
+    "N1_gradiente_beta_phi_zero": true,
+    "erro_objetivo_glmmTMB": 2.3874235921539366e-12,
+    "erro_gradiente_glmmTMB": 2.1233015345956119e-14,
+    "hessiana_inferencia": false,
+    "codigo": [
+      "c527f4dad13d9ee4cfe0049fc2a1a5dd",
+      "0f7bf9e05a12bc62b0c3fc13ac41a612",
+      "b2e0982cfdf9e3a307a75f8463a1aca0"
+    ]
+  },
+  "modelos": {
+    "outputs/modelo/modelos/completo.rds": "b0ccba60886d06688237d0a3c1f5da16",
+    "outputs/modelo/modelos/treino.rds": "8f04a2f39beb00ad154f0559d4420452"
+  },
+  "codigo": {
+    "scripts/modelo/ajustar.R": "be451531648aa9c7d95e40c3a6b715c6",
+    "scripts/modelo/bb_truncada.cpp": "c527f4dad13d9ee4cfe0049fc2a1a5dd",
+    "scripts/modelo/common.R": "0f7bf9e05a12bc62b0c3fc13ac41a612",
+    "scripts/modelo/complementar.R": "11917ce56ca64cc4be5991f4fad194a6",
+    "scripts/modelo/diagnosticar.R": "8ec888e17696212297b19545b11f6d63",
+    "scripts/modelo/preparar.R": "9e9bfd7a993ef7ae67f65eb35a3d04bd",
+    "scripts/modelo/relatar.R": "425abec9a77f6a9a7340ddb376253f7c",
+    "scripts/modelo/run.sh": "9f93a09153ef2993b9e9e163fdfc9cce",
+    "scripts/modelo/testar_implementacao.R": "b2e0982cfdf9e3a307a75f8463a1aca0",
+    "scripts/modelo/validar.R": "4515da6853e5507cdea4d7bca1528401",
+    "scripts/modelo/verificar.R": "8af9954bac681b1fd6a642f7f8975e65",
+    "scripts/modelo/worm.R": "d29ea7b8a6d2a06df95f4a80e7431410"
+  },
+  "hessiana_populacional": false,
+  "selecao": false,
+  "validacao_numerica_inferencial": false
+}

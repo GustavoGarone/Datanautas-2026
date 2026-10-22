@@ -1,0 +1,17 @@
+{
+  "pacote": "gamlss",
+  "versao": "5.4.22",
+  "funcao": "wp",
+  "bandas": "padrao_normal_pontuais_95_porcento",
+  "bandas_usam_todos_residuos": true,
+  "pontos_exibidos": 100,
+  "n": 47030,
+  "N1_excluido": true,
+  "curva_cubica_visivel": false,
+  "calibradas_para_dependencia": false,
+  "hessiana_populacional": false,
+  "reajuste": false,
+  "modelo_md5": "8f04a2f39beb00ad154f0559d4420452",
+  "residuos_md5": "3fc476cd0042762ffe2dcc1543363777",
+  "codigo": "d29ea7b8a6d2a06df95f4a80e7431410"
+}

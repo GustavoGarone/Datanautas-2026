@@ -1,0 +1,130 @@
+{
+  "data": "2026-10-22",
+  "operacao": "Consolidacao administrativa sem reestimacao dos parametros",
+  "equivalencia": {
+    "base_coluna_a_coluna": true,
+    "fatores_contextos_reserva": true,
+    "parametros_fit_gradiente": true,
+    "diagnostico_completo_identico": true,
+    "validacao_interna_tolerancia": 9.9999999999999998e-13,
+    "validacao_interna_conferida": true
+  },
+  "congelamento_original": {
+    "id": "truncada_disp_ano",
+    "data": "2026-10-22 15:19:26.613305",
+    "modelo_md5": "3bddbce4e468b870e7e10df5cb1b969f",
+    "mesma_especificacao_para_reajuste_treino": true,
+    "avaliacao": "validacao interna retrospectiva; nao confirmacao intocada",
+    "criterio": "Escolhido para avaliar dispersao temporal principiada; sem selecao adicional nesta reserva",
+    "numérica": "Triagem com gradiente ainda pendente de validacao inferencial",
+    "hessiana_inferencia": false,
+    "selecao": false
+  },
+  "originais_preservados": {
+    "LICENSE": "cfea204b69096d61e46e9c91254bf8d2",
+    "assets/banner_datanautas.png": "76fb42cf8f5af203ecebbadd5325b4ba",
+    "data/raw/contexto_uf_ano.parquet": "afdc50091bb7fc232f49b0c5c48b1da5",
+    "data/raw/cursos_ano.parquet": "fb7573b81d5f515c6a07d8b1aeb2e299",
+    "data/raw/cursos_uf_ano.parquet": "dd00f25f4006bb23599d007670285aac",
+    "data/raw/fluxo_inep_contexto.parquet": "df1889f8f15370f13dd2fa591021a5c1",
+    "data/raw/ies_ano.parquet": "b78daed6d53229c26ed448e1b829f760",
+    "data/raw/pnaes_ies_ano.parquet": "e9107b97bcf33b8e11e99ba5b2ce5284",
+    "data/raw/qualidade_cursos.parquet": "2e29599bd3199008d76f84df2fc7e360",
+    "data/raw/qualidade_ies.parquet": "4155eade5f87ac4d5cc50d134c70ae44",
+    "data/raw/trajetoria_cursos.parquet": "3b36ec3ea099b3a00d2b246ffc8cb386",
+    "data/raw/trajetoria_cursos_anual.parquet": "98327e6143214e7ead835a2b92e1f24c",
+    "docs/armadilhas_e_perguntas.pdf": "0254ad1c56b8a65f6fd521444d24e8d0",
+    "docs/briefing_impacta.pdf": "7a155a271dcf212ddbef9e117d09ed0a",
+    "docs/dicionario_dados.pdf": "9da57e1ff72dcd74479c741c126960b5",
+    "entregas_finais/datanauts_slides.pdf": "e2bb39b551b3b522a35b44f0129117bc",
+    "entregas_finais/declaracao_uso_ia.txt": "d41d8cd98f00b204e9800998ecf8427e",
+    "notebooks/01_dicionario_de_dados.ipynb": "43bfe2e7a772eadc43ff85fc0276497e",
+    "notebooks/02_EDA.ipynb": "e37834c85b8972162056a5d48736d395",
+    "src/utils.py": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "modelos": {
+    "completo": {
+      "antes": "3bddbce4e468b870e7e10df5cb1b969f",
+      "depois": "b0ccba60886d06688237d0a3c1f5da16",
+      "parametros_identicos": true
+    },
+    "treino": {
+      "antes": "42c608d6ada299b05eda8788c393eb88",
+      "depois": "8f04a2f39beb00ad154f0559d4420452",
+      "parametros_identicos": true
+    }
+  },
+  "atuais": [
+    {
+      "nome": "completo",
+      "md5": "b0ccba60886d06688237d0a3c1f5da16",
+      "proveniencia": {
+        "modelo_original_md5": "3bddbce4e468b870e7e10df5cb1b969f",
+        "codigo_original": "daaf4b35fbcf15f7ef2c9064a4805bd7",
+        "assinatura_original": {
+          "id": "truncada_disp_ano",
+          "validation": false,
+          "base": "8e797a430f6152dc9b3f2dfa454a8b0e",
+          "inicializacao": "4d606279655b0560d1a3ac47d9e8af9e",
+          "codigo": ["a1af2725459a90c39acdfb328c8e2665", "f0e45eba791b34aa629d18e5ececde29", "fcf07bd637fb952a5e54b4b7cd53e5e5", "c527f4dad13d9ee4cfe0049fc2a1a5dd", "ff626b9ed9d48518997d824e0b38ecf9", "63d702d4d6acf01f23fedc8693d1ee4a", "d48237fe41a6dd4f5dc1d9098bb7cd66", "53d57a5c8952b85fcb34636808b95e0a", "9880992ccd6663e86fa31ffb46c45844", "596ff6c4b8230377cc4b24e5e6342189", "9fd5bbff6094a20669810896ed90dbf3"],
+          "formula": ["cbind(eventos_resposta, demais_vinculos) ~ ano + modalidade + ", "    categoria_administrativa + organizacao_academica + grau_academico + ", "    cine_area_geral + p_feminino + p_ppi + p_25_anos_ou_mais + ", "    p_escola_publica + p_deficiencia + p_reserva_vagas + p_noturno + ", "    (1 | co_ies) + (1 | co_curso) + log(vinculos) + ies_m_p_feminino + ", "    ies_m_p_ppi + ies_m_p_25_anos_ou_mais + ies_m_p_escola_publica + ", "    ies_m_p_deficiencia + ies_m_p_reserva_vagas + ies_m_p_noturno + ", "    ies_m_logN + ies_frac_ead + ies_log_n_cursos + ano:modalidade + ", "    modalidade:log(vinculos)"],
+          "dispersao": "~ano * modalidade + modalidade * log(vinculos)",
+          "resposta": "desvinculados + trancados",
+          "familia": "beta_binomial_truncada_superior_condicional_RE_normais",
+          "TMB": "1.9.17",
+          "framework": "TMBad",
+          "threads": 2,
+          "autopar": true,
+          "se": false
+        },
+        "inicializacao_original": {
+          "id": "truncada",
+          "modelo_md5": "afa0a13f15213c90d4337d064d1bb967"
+        },
+        "nota": "Somente metadados e caminhos migrados; parametros, objetivo e gradiente inalterados"
+      }
+    },
+    {
+      "nome": "treino",
+      "md5": "8f04a2f39beb00ad154f0559d4420452",
+      "proveniencia": {
+        "modelo_original_md5": "42c608d6ada299b05eda8788c393eb88",
+        "codigo_original": "daaf4b35fbcf15f7ef2c9064a4805bd7",
+        "assinatura_original": {
+          "id": "truncada_disp_ano",
+          "validation": true,
+          "base": "8e797a430f6152dc9b3f2dfa454a8b0e",
+          "inicializacao": "4d606279655b0560d1a3ac47d9e8af9e",
+          "codigo": ["a1af2725459a90c39acdfb328c8e2665", "f0e45eba791b34aa629d18e5ececde29", "fcf07bd637fb952a5e54b4b7cd53e5e5", "c527f4dad13d9ee4cfe0049fc2a1a5dd", "ff626b9ed9d48518997d824e0b38ecf9", "63d702d4d6acf01f23fedc8693d1ee4a", "d48237fe41a6dd4f5dc1d9098bb7cd66", "53d57a5c8952b85fcb34636808b95e0a", "9880992ccd6663e86fa31ffb46c45844", "596ff6c4b8230377cc4b24e5e6342189", "9fd5bbff6094a20669810896ed90dbf3"],
+          "formula": ["cbind(eventos_resposta, demais_vinculos) ~ ano + modalidade + ", "    categoria_administrativa + organizacao_academica + grau_academico + ", "    cine_area_geral + p_feminino + p_ppi + p_25_anos_ou_mais + ", "    p_escola_publica + p_deficiencia + p_reserva_vagas + p_noturno + ", "    (1 | co_ies) + (1 | co_curso) + log(vinculos) + ies_m_p_feminino + ", "    ies_m_p_ppi + ies_m_p_25_anos_ou_mais + ies_m_p_escola_publica + ", "    ies_m_p_deficiencia + ies_m_p_reserva_vagas + ies_m_p_noturno + ", "    ies_m_logN + ies_frac_ead + ies_log_n_cursos + ano:modalidade + ", "    modalidade:log(vinculos)"],
+          "dispersao": "~ano * modalidade + modalidade * log(vinculos)",
+          "resposta": "desvinculados + trancados",
+          "familia": "beta_binomial_truncada_superior_condicional_RE_normais",
+          "TMB": "1.9.17",
+          "framework": "TMBad",
+          "threads": 2,
+          "autopar": true,
+          "se": false
+        },
+        "inicializacao_original": {
+          "id": "truncada_disp_ano",
+          "modelo_md5": "3bddbce4e468b870e7e10df5cb1b969f"
+        },
+        "nota": "Somente metadados e caminhos migrados; parametros, objetivo e gradiente inalterados"
+      }
+    }
+  ],
+  "ambiente": {
+    "R": "R version 4.5.1 (2025-06-13)",
+    "flake_lock": "ec5dc6f0eb60cb57be10be3ca5f0cfaa",
+    "pacotes": {
+      "TMB": "1.9.17",
+      "glmmTMB": "1.1.11",
+      "nanoparquet": "0.4.2",
+      "data.table": "1.17.8",
+      "ggplot2": "3.5.2",
+      "jsonlite": "2.0.0",
+      "gamlss": "5.4.22"
+    }
+  }
+}
