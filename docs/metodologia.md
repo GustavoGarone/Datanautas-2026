@@ -158,6 +158,7 @@ nix develop path:. -c Rscript scripts/modelo/variantes_diag.R --populacao=filtra
 nix develop path:. -c Rscript scripts/modelo/variantes_integrada.R --populacao=filtrada --sorteios=200   # um processo por vez (memória)
 nix develop path:. -c Rscript scripts/modelo/variantes_diagnosticar.R dispre --populacao=filtrada
 nix develop path:. -c Rscript scripts/modelo/variantes_hessiana.R dispre --populacao=filtrada
+nix develop path:. -c Rscript scripts/modelo/figuras_pitch.R   # figuras do modelo para os slides
 nix develop path:. -c quarto render pipeline_modelo.qmd   # documento único; -P reexecutar:true refaz tudo
 ```
 

@@ -197,6 +197,40 @@ Outros (conferido):
 - Dizer explicitamente que são **associações ecológicas**: o perfil dos matriculados não
   identifica quem saiu, e isso não é causalidade.
 
+### 5.1 Figuras para os slides
+
+Geradas por `scripts/modelo/figuras_pitch.R` a partir das saídas salvas (PNG, 200 dpi,
+fundo claro). Sugestão de uso: uma figura por achado.
+
+**Achado 1 — o EAD se distancia do presencial (dados).**
+
+![EAD × presencial](../outputs/modelo/variantes/filtrada/dispre/figuras/ead_presencial_taxas.png)
+
+**Achado 1 — o mesmo, com controles (modelo).** Usar se houver tempo para mostrar que
+não é só composição.
+
+![Interação ano × EAD](../outputs/modelo/variantes/filtrada/dispre/figuras/ead_interacao_ano.png)
+
+**Achado 2 — noturno: diferença bruta contra a estimada pelo modelo.**
+
+![Noturno bruto × ajustado](../outputs/modelo/variantes/filtrada/dispre/figuras/noturno_bruto_ajustado.png)
+
+**Achado 3 — perfis dos estudantes.**
+
+![Perfis em pontos percentuais](../outputs/modelo/variantes/filtrada/dispre/figuras/perfis_efeito_pp.png)
+
+**Painel descritivo da exploração** (rede, ProUni, noturno; com e sem trancamento):
+
+![Painel da EDA](../outputs/eda/graficos/painel_pitch.png)
+
+Notas para quem apresenta:
+- Os pontos percentuais vêm de uma aproximação local na taxa média (32,3%):
+  100 × β × p(1 − p).
+- "Comparando cursos da mesma instituição" é a descrição correta: o modelo inclui
+  efeitos de IES e de curso e as médias institucionais dos perfis.
+- Não dizer que o turno noturno *causa* desistência. Dizer que cursos noturnos têm
+  taxas maiores do que cursos diurnos comparáveis.
+
 ## 6. Leitura dos achados
 
 Proposta de três achados. Cada um combina a exploração (sem controles) com o modelo

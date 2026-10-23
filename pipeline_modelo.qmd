@@ -71,7 +71,8 @@ if (isTRUE(params$reexecutar)) {
     c("scripts/modelo/variantes_integrada.R", "--populacao=filtrada", "--sorteios=200"),
     c("scripts/modelo/variantes_diagnosticar.R", "base", "--populacao=filtrada"),
     c("scripts/modelo/variantes_diagnosticar.R", "dispre", "--populacao=filtrada"),
-    c("scripts/modelo/variantes_hessiana.R", "dispre", "--populacao=filtrada"))
+    c("scripts/modelo/variantes_hessiana.R", "dispre", "--populacao=filtrada"),
+    c("scripts/modelo/figuras_pitch.R"))
   for (p in passos) stopifnot(system2("Rscript", p) == 0)
 }
 ```
@@ -486,6 +487,12 @@ tab(pf[, .(`Perfil dos matriculados (+10 pp)` = Perfil,
            `≈ variação na taxa (pp)` = paste0(ifelse(pp >= 0, "+", ""), br(pp, 2)))], align = "lrrr")
 ```
 
+```{r}
+#| label: fig-perfis
+#| fig-cap: "Variação aproximada da taxa anual para +10 pp de cada perfil no curso, com IC 95%."
+include_graphics(file.path(VAR, "dispre/figuras/perfis_efeito_pp.png"))
+```
+
 **Como ler.**
 
 - A **razão de chances** compara as chances de desvínculo ou trancamento quando a
@@ -513,6 +520,13 @@ tab(pf[, .(`Perfil dos matriculados (+10 pp)` = Perfil,
 ead <- cf[grepl("^modalidadeEAD$|^ano20..:modalidadeEAD$", termo)]
 tab(ead[, .(Termo = termo, `Razão de chances` = br(razao_chances_subjacente, 2),
             `IC 95%` = paste0(br(rc_ic95_inf, 2), " – ", br(rc_ic95_sup, 2)))], align = "lrr")
+```
+
+```{r}
+#| label: fig-ead
+#| fig-cap: "Taxas observadas por modalidade (esquerda) e razão de chances da interação ano × EAD no modelo (direita)."
+#| layout-ncol: 2
+include_graphics(file.path(VAR, c("dispre/figuras/ead_presencial_taxas.png", "dispre/figuras/ead_interacao_ano.png")))
 ```
 
 Em 2020, os cursos EAD tinham chances menores que presenciais comparáveis (razão 0,61).
@@ -557,6 +571,12 @@ tab(data.table(
   `Base inferencial` = c("Sim; o efeito cai à metade com os controles", "Sim; efeito pequeno", "Sim; forte",
                          "Sim", "Em parte; Engenharia e TIC invertem", "Não; só descritivo")),
   align = "lll")
+```
+
+```{r}
+#| label: fig-noturno
+#| fig-cap: "Noturno − diurno: comparação direta dentro das IES (laranja) e estimativa do modelo com controles (azul, IC 95%)."
+include_graphics(file.path(VAR, "dispre/figuras/noturno_bruto_ajustado.png"))
 ```
 
 **Leitura.**

@@ -1,0 +1,6 @@
+{
+  "figuras": ["ead_interacao_ano.png", "ead_presencial_taxas.png", "noturno_bruto_ajustado.png", "perfis_efeito_pp.png"],
+  "taxa_media": 0.3227,
+  "conversao_pp": "100 × beta × p(1−p), aproximação local na taxa média",
+  "codigo": "442718246d195b01788f0f6f6d5a3bc3"
+}

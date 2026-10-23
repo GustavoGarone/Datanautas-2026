@@ -21,6 +21,7 @@ inferir risco individual nem causalidade.
 - **[Documento completo do pipeline](pipeline_modelo.html)**
   ([fonte Quarto](pipeline_modelo.qmd)): dados, exploração, modelo, testes,
   diagnósticos, resultados e limitações, explicados para leitura.
+- **[Guia para a equipe](docs/guia_equipe.md)**: o que foi feito, achados e material pronto.
 - [Esqueleto do relatório de entrega](docs/relatorio_entrega.md) e
   [declaração de uso de IA](entregas_finais/declaracao_uso_ia.txt).
 - [Exploração com trancamento](outputs/eda/) e
