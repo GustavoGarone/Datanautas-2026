@@ -6,12 +6,12 @@
   "passo_newton": 1,
   "gradiente_max_antes": 39.011844223663502,
   "gradiente_max_newton": 0.019865333961114118,
-  "autovalor_min": 7.2507028479483706,
-  "autovalor_max": 4170415.3650555313,
-  "condicao": 575173.94554868224,
+  "autovalor_min": 7.2495455513185725,
+  "autovalor_max": 4169689.2177585904,
+  "condicao": 575165.60013892082,
   "hessiana_positiva": true,
   "metodo": "optimHess sobre gradiente de Laplace (TMB); EP de Wald; sem sdreport dos latentes",
   "nota": "Exploratório: EP condicionais à especificação e à aproximação de Laplace; associação, não causalidade",
-  "codigo": "ff8d7c75c8867b4107b1b7862d14793f",
-  "modelo": "3d706c9bf504acc9886b8b90fa5ce765"
+  "codigo": "dfefd77ea2824883f36d4cc91ce7fae3",
+  "modelo": "dd253eccedb1c24c67e97b5662045d93"
 }

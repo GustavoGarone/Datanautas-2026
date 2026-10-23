@@ -240,3 +240,13 @@ trancaram alguma vez estavam evadidos: 51,0%, tabela 14, p. 56, 2009–2015.
 Não há horizonte uniforme pós-trancamento; não extrapolar nem usar para imputação.
 Fonte primária conferida:
 [Santos (2016)](https://repositorio.ufmg.br/bitstream/1843/BUOS-AJNNJ2/1/disserta__o_finalizada__22112016.pdf#page=56).
+
+## Modelo atual polido e recálculo (23/10)
+
+`variantes_hessiana.R` passou a salvar o `dispre` no ponto após o passo de Newton
+(gradiente máximo 0,02) e a recalcular a Hessiana nesse ponto. Todo o fluxo a jusante foi
+refeito com esse modelo: tabela de coeficientes, figuras, diagnóstico por simulação, EDA,
+notebooks com o cache apagado e documento-síntese.
+- As estimativas não mudaram; os EP mudaram no máximo 0,05%.
+- Os diagnósticos variaram só por Monte Carlo: zeros condicionais 1,154; QQ condicional
+  0,015; IES fora do envelope 2,6%; correlação temporal 0,022; zeros marginais 0,84.
