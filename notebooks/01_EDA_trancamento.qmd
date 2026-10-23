@@ -1,0 +1,234 @@
+---
+title: "Análise exploratória: desvínculo e trancamento"
+subtitle: "Datanautas — Datathon Impacta.dev 2026"
+author: "Equipe Datanautas"
+date: 2026-10-23
+lang: pt-BR
+format:
+  html:
+    toc: true
+    number-sections: true
+    code-fold: true
+    code-summary: "Mostrar código"
+    embed-resources: true
+    theme: cosmo
+    fig-width: 10
+    fig-height: 5.5
+execute:
+  warning: false
+  message: false
+knitr:
+  opts_knit:
+    root.dir: ".."
+---
+
+## Sobre este notebook {.unnumbered}
+
+Este notebook parte **apenas do arquivo original** `data/raw/cursos_ano.parquet` e refaz
+toda a análise exploratória do projeto. Ele estende a EDA original da equipe
+(caderno `02_EDA.ipynb` do branch exploratório `sanches`, já não mantido no `dev`), que usava só o desvínculo, mostrando lado a
+lado três medidas:
+
+| Medida | Fórmula | Uso |
+|---|---|---|
+| **Desvínculo** | desvinculados ÷ vínculos | medida da EDA original |
+| **Trancamento** | trancados ÷ vínculos | componente separado |
+| **Desvínculo + trancamento** | (desvinculados + trancados) ÷ vínculos | **resposta do modelo** (notebook 02) |
+
+Os vínculos somam matriculados (cursando ou formados), trancados, desvinculados,
+transferidos e falecidos.
+
+Para renderizar, a partir da raiz do repositório:
+
+```bash
+nix develop -c quarto render notebooks/01_EDA_trancamento.qmd
+```
+
+Todas as comparações deste notebook são **associações descritivas, sem controles**. O
+notebook 02 verifica quais delas se sustentam quando se comparam cursos parecidos da
+mesma instituição.
+
+```{r}
+#| label: setup
+suppressPackageStartupMessages({library(data.table); library(ggplot2); library(knitr)})
+setDTthreads(2)
+br  <- function(x, d = 1) formatC(x, format = "f", digits = d, big.mark = ".", decimal.mark = ",")
+pct <- function(x, d = 1) paste0(br(100 * x, d), "%")
+tab <- function(x, ...) kable(x, format.args = list(big.mark = ".", decimal.mark = ","), ...)
+MED   <- c(desvinculo = "Desvínculo", trancamento = "Trancamento", composta = "Desvínculo + trancamento")
+CORES <- c("Desvínculo" = "#eb6834", "Trancamento" = "#6250d6", "Desvínculo + trancamento" = "#2a78d6")
+theme_set(theme_minimal(base_size = 12) +
+  theme(legend.position = "bottom", plot.title.position = "plot", panel.grid.minor = element_blank()))
+rotulo_pct <- scales::label_percent(accuracy = 1)
+# Taxas agregadas: soma dos numeradores ÷ soma dos vínculos (nunca média simples de taxas).
+taxas <- function(g) g[, .(vinculos = sum(vinculos),
+  desvinculo = sum(desvinculados) / sum(vinculos), trancamento = sum(trancados) / sum(vinculos),
+  composta = sum(desvinculados + trancados) / sum(vinculos))]
+longo <- function(x, ids) melt(x, id.vars = ids, measure.vars = names(MED), variable.name = "medida",
+  value.name = "taxa")[, medida := factor(MED[as.character(medida)], levels = MED)]
+```
+
+# Dados e população
+
+```{r}
+#| label: dados
+bruto <- as.data.table(nanoparquet::read_parquet("data/raw/cursos_ano.parquet"))
+num <- c("desvinculados", "trancados", "transferidos", "falecidos", "vinculos", "matriculas",
+         "mat_noturno", "mat_escola_publica", "mat_prouni", "ingressantes")
+for (v in num) set(bruto, j = v, value = as.numeric(bruto[[v]]))
+stopifnot(all(bruto$vinculos == bruto$matriculas + bruto$trancados + bruto$desvinculados +
+                bruto$transferidos + bruto$falecidos))
+d <- bruto[presente_5_anos == 1 & poucos_alunos == 0 & matriculas > 0]
+d[, `:=`(prop_noturno = mat_noturno / matriculas, prop_escola_publica = mat_escola_publica / matriculas,
+         prop_prouni = mat_prouni / matriculas)]
+tab(data.table(
+  Etapa = c("Base original (curso-anos)", "Cursos presentes nos 5 anos e ≥ 30 vínculos", "… e com matrículas positivas"),
+  `Curso-anos` = c(nrow(bruto), bruto[presente_5_anos == 1 & poucos_alunos == 0, .N], nrow(d)),
+  Cursos = c(uniqueN(bruto$co_curso), bruto[presente_5_anos == 1 & poucos_alunos == 0, uniqueN(co_curso)], uniqueN(d$co_curso))))
+```
+
+A identidade contábil dos vínculos foi conferida em todas as linhas. A população tem
+três filtros:
+
+- **presente nos cinco anos:** compara-se a mesma oferta de cursos ao longo do tempo;
+- **pelo menos 30 vínculos no ano:** taxas de cursos minúsculos são instáveis;
+- **matrículas positivas:** é a condição do modelo do notebook 02. A EDA original não a
+  exigia, e por isso tinha 459 linhas a mais.
+
+O preço é que os resultados valem para cursos estáveis e não muito pequenos.
+
+# Taxas por rede e modalidade
+
+```{r}
+#| label: rede-modalidade
+rm_ <- d[, taxas(.SD), by = .(rede, modalidade)][order(rede, modalidade)]
+tab(rm_[, .(Rede = rede, Modalidade = modalidade, Vínculos = vinculos, Desvínculo = pct(desvinculo),
+            Trancamento = pct(trancamento), `Desvínculo + trancamento` = pct(composta))],
+    caption = "2020–2024 agregado", align = "llrrrr")
+ggplot(longo(rm_, c("rede", "modalidade", "vinculos")), aes(paste(rede, modalidade, sep = "\n"), taxa, fill = medida)) +
+  geom_col(position = position_dodge(.85), width = .8) +
+  geom_text(aes(label = pct(taxa)), position = position_dodge(.85), vjust = -.35, size = 3.2) +
+  scale_fill_manual(values = CORES, name = NULL) + scale_y_continuous(labels = rotulo_pct) +
+  labs(title = "Taxas anuais por rede e modalidade, 2020–2024", x = NULL, y = NULL)
+```
+
+O trancamento muda bastante a leitura. No **EAD público**, a taxa composta é mais que o
+dobro da de desvínculo (33% contra 14%). Olhar só o desvínculo esconderia boa parte da
+interrupção nesse grupo.
+
+# Evolução 2020–2024
+
+```{r}
+#| label: evolucao
+ev <- d[, taxas(.SD), by = .(ano, rede, modalidade)]
+ggplot(longo(ev, c("ano", "rede", "modalidade", "vinculos")), aes(ano, taxa, colour = medida)) +
+  geom_line(linewidth = 1) + geom_point(size = 1.8) + facet_grid(rede ~ modalidade) +
+  scale_colour_manual(values = CORES, name = NULL) + scale_y_continuous(labels = rotulo_pct) +
+  labs(title = "Evolução das taxas anuais", subtitle = "Mesma população de cursos em todos os anos", x = NULL, y = NULL)
+mod <- dcast(d[, .(t = sum(desvinculados + trancados) / sum(vinculos)), by = .(modalidade, ano)], modalidade ~ ano, value.var = "t")
+mod[, (2:6) := lapply(.SD, pct), .SDcols = 2:6]
+tab(mod, caption = "Desvínculo + trancamento por modalidade")
+```
+
+O **EAD sobe de 33% para 41%**, enquanto o presencial cai levemente. Nas duas redes o
+desvínculo cresce, e o trancamento cai a partir de 2022.
+
+# Turno noturno dentro da mesma instituição
+
+Cursos noturnos concentram estudantes que trabalham. Para não confundir o turno com o
+tipo de instituição, comparamos **dentro de cada IES** os cursos predominantemente
+noturnos (≥ 70% dos matriculados à noite) com os predominantemente diurnos (≤ 30%), no
+presencial de 2024. Em cada IES, cada grupo tem sua taxa agregada, e calculamos a
+diferença noturno − diurno.
+
+```{r}
+#| label: noturno
+p24 <- d[ano == 2024 & modalidade == "Presencial"]
+p24[, turno := fifelse(prop_noturno >= .7, "Noturno", fifelse(prop_noturno <= .3, "Diurno", NA_character_))]
+pr <- p24[!is.na(turno), taxas(.SD), by = .(rede, co_ies, turno)]
+pw <- dcast(pr, rede + co_ies ~ turno, value.var = names(MED))[!is.na(desvinculo_Noturno) & !is.na(desvinculo_Diurno)]
+for (m in names(MED)) pw[, (paste0("dif_", m)) := 100 * (get(paste0(m, "_Noturno")) - get(paste0(m, "_Diurno")))]
+par_ <- melt(pw, id.vars = c("rede", "co_ies"), measure.vars = paste0("dif_", names(MED)),
+             variable.name = "medida", value.name = "dif_pp")[, medida := factor(MED[sub("^dif_", "", medida)], levels = MED)]
+resumo_nt <- rbind(par_[, .(rede = "Total", IES = .N, mediana = median(dif_pp), positiva = mean(dif_pp > 0)), by = medida],
+                   par_[, .(IES = .N, mediana = median(dif_pp), positiva = mean(dif_pp > 0)), by = .(medida, rede)], use.names = TRUE)
+tab(resumo_nt[, .(Medida = medida, Rede = rede, IES, `Mediana noturno − diurno (pp)` = br(mediana),
+                  `IES com diferença > 0` = pct(positiva, 0))], align = "llrrr")
+set.seed(2026)
+ggplot(par_, aes(medida, dif_pp, colour = medida)) + geom_hline(yintercept = 0, linetype = 2) +
+  geom_jitter(width = .18, alpha = .25, size = .8) + geom_boxplot(fill = NA, colour = "black", outlier.shape = NA, width = .45) +
+  facet_wrap(~rede) + scale_colour_manual(values = CORES, guide = "none") + coord_cartesian(ylim = c(-30, 30)) +
+  labs(title = "Noturno − diurno dentro da mesma IES, presencial 2024", subtitle = "Cada ponto é uma IES com os dois tipos de curso",
+       x = NULL, y = "Diferença (pp)")
+nt_tot <- resumo_nt[medida == "Desvínculo + trancamento" & rede == "Total"]
+```
+
+Em `r nt_tot$IES` instituições com os dois tipos de curso, os noturnos têm taxa composta
+mediana **`r br(nt_tot$mediana)` pp maior**, e a diferença é positiva em
+`r pct(nt_tot$positiva, 0)` delas. A diferença é maior na medida composta do que no
+desvínculo isolado: cursos noturnos também trancam mais. É o achado exploratório mais
+robusto. No notebook 02, o modelo estima quanto dessa diferença persiste depois de
+controlar idade, origem escolar, área e porte.
+
+# Egressos de escola pública
+
+```{r}
+#| label: escola-publica
+pp <- d[modalidade == "Presencial"]
+pp[, quartil := cut(prop_escola_publica, unique(quantile(prop_escola_publica, 0:4 / 4)), include.lowest = TRUE, labels = FALSE), by = rede]
+ep <- pp[, c(taxas(.SD), list(prop_media = mean(prop_escola_publica))), by = .(rede, quartil)][order(rede, quartil)]
+ggplot(longo(ep, c("rede", "quartil", "vinculos", "prop_media")), aes(factor(paste0("Q", quartil)), taxa, colour = medida, group = medida)) +
+  geom_line(linewidth = 1) + geom_point(size = 2) + facet_wrap(~rede) +
+  scale_colour_manual(values = CORES, name = NULL) + scale_y_continuous(labels = rotulo_pct) +
+  labs(title = "Taxas por quartil de egressos de escola pública, presencial 2020–2024",
+       subtitle = "Quartis dentro de cada rede (Q1 = menor proporção)", x = NULL, y = NULL)
+```
+
+O desvínculo cresce do 1º para o 4º quartil nas duas redes. Na medida composta, a rede
+privada sobe do 1º para o 2º quartil e depois estabiliza. A relação existe, mas é mais
+fraca do que parece olhando só o desvínculo.
+
+# ProUni na rede privada
+
+```{r}
+#| label: prouni
+pv <- p24[rede == "Privada" & nome_cine_area_geral != "Programas básicos"]
+pv[, quartil := cut(rank(prop_prouni, ties.method = "first"), 4, labels = FALSE)]
+pu <- pv[, c(taxas(.SD), list(cursos = .N, cobertura = mean(prop_prouni))), by = quartil][order(quartil)]
+tab(pu[, .(Quartil = paste0("Q", quartil), Cursos = cursos, `Cobertura média` = pct(cobertura),
+           Desvínculo = pct(desvinculo), Trancamento = pct(trancamento), `Desvínculo + trancamento` = pct(composta))],
+    caption = "Privada presencial, 2024", align = "lrrrrr")
+```
+
+**Atenção.** No desvínculo isolado, cursos com mais bolsistas parecem perder mais alunos
+(`r pct(pu$desvinculo[1])` → `r pct(pu$desvinculo[4])`). Na medida composta, a relação
+quase some (`r pct(pu$composta[1])` → `r pct(pu$composta[4])`), porque esses cursos trancam
+menos. O ProUni parece mudar a forma da saída, não o seu volume. Isto não sustenta a
+afirmação de que o ProUni aumenta a desistência. O FIES não é analisado: há zeros
+intermitentes em grandes instituições que parecem falta de registro.
+
+# Área do conhecimento (Cine)
+
+```{r}
+#| label: cine
+#| fig-height: 6.5
+ci <- pp[, taxas(.SD), by = nome_cine_area_geral][order(composta)]
+ggplot(longo(ci, c("nome_cine_area_geral", "vinculos")), aes(taxa, factor(nome_cine_area_geral, levels = ci$nome_cine_area_geral), fill = medida)) +
+  geom_col(position = position_dodge(.85), width = .8) + scale_fill_manual(values = CORES, name = NULL) +
+  scale_x_continuous(labels = rotulo_pct) + labs(title = "Taxas por área geral Cine, presencial 2020–2024", x = NULL, y = NULL)
+```
+
+Saúde e bem-estar tem as menores taxas, e Serviços e Negócios as maiores. Áreas diferem
+em perfil de aluno e de instituição; o notebook 02 mostra que parte da ordem bruta muda
+com os controles.
+
+# Síntese
+
+1. O **EAD** concentra a alta da interrupção: de 33% para 41% entre 2020 e 2024.
+2. **Cursos noturnos** têm taxas maiores do que os diurnos da mesma instituição, e a
+   diferença aumenta quando se inclui o trancamento.
+3. **Escola pública** se associa a taxas maiores, de forma mais fraca na medida composta.
+4. **ProUni**: o gradiente do desvínculo desaparece quando se soma o trancamento.
+
+Todas são associações sem controles. O notebook `02_modelo_inferencial.qmd` testa quais
+delas se mantêm comparando cursos semelhantes da mesma instituição.

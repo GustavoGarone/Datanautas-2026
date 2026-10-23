@@ -1,0 +1,607 @@
+---
+title: "Modelo inferencial: beta-binomial misto com dispersão aleatória"
+subtitle: "Datanautas — Datathon Impacta.dev 2026"
+author: "Equipe Datanautas"
+date: 2026-10-23
+lang: pt-BR
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    code-fold: true
+    code-summary: "Mostrar código"
+    embed-resources: true
+    theme: cosmo
+    fig-width: 10
+    fig-height: 5.5
+execute:
+  warning: false
+  message: false
+knitr:
+  opts_knit:
+    root.dir: ".."
+params:
+  reajustar: false
+  simulacoes: 500
+  reserva: false
+---
+
+## Sobre este notebook {.unnumbered}
+
+Este notebook parte do arquivo original `data/raw/cursos_ano.parquet` e executa **toda a
+parte inferencial** do projeto:
+
+1. preparação dos dados;
+2. especificação, compilação e teste da verossimilhança;
+3. ajuste do modelo adotado e do modelo de comparação;
+4. diagnóstico por simulação;
+5. Hessiana, intervalos de confiança e figuras;
+6. comparação com os achados da exploração (`notebooks/01_EDA_trancamento.qmd`).
+
+O texto explica cada passo e o código fica recolhido.
+
+**Parâmetros de execução** (a partir da raiz do repositório):
+
+```bash
+nix develop -c quarto render notebooks/02_modelo_inferencial.qmd                      # reaproveita ajustes salvos
+nix develop -c quarto render notebooks/02_modelo_inferencial.qmd -P reajustar:true    # refaz tudo do zero (horas)
+nix develop -c quarto render notebooks/02_modelo_inferencial.qmd -P reserva:true      # inclui validação em anos reservados
+```
+
+Os ajustes por máxima verossimilhança levam de 20 a 40 minutos cada, e a Hessiana cerca
+de 12. Por padrão, o notebook **reaproveita** os modelos e a Hessiana já salvos em
+`outputs/modelo/variantes/filtrada/`, que foram produzidos por este mesmo código. A
+preparação dos dados, os testes, as simulações e todas as tabelas e figuras são sempre
+recalculados. Os resultados das simulações ficam em cache em `.cache/notebooks/` para
+acelerar renderizações repetidas.
+
+```{r}
+#| label: setup
+suppressPackageStartupMessages({library(data.table); library(ggplot2); library(knitr)})
+# Biblioteca do projeto: densidade truncada, momentos, simulador, matrizes de desenho
+# e compilação do .cpp. Ao ser carregada, não ajusta nada.
+source("scripts/modelo/variantes.R")
+POP <- "filtrada"; B <- as.integer(params$simulacoes); REAJUSTAR <- isTRUE(params$reajustar)
+NB_CACHE <- ".cache/notebooks"; dir.create(NB_CACHE, recursive = TRUE, showWarnings = FALSE)
+br  <- function(x, d = 1) formatC(x, format = "f", digits = d, big.mark = ".", decimal.mark = ",")
+pct <- function(x, d = 1) paste0(br(100 * x, d), "%")
+tab <- function(x, ...) kable(x, format.args = list(big.mark = ".", decimal.mark = ","), ...)
+# Cache simples em disco, invalidado quando a chave (hashes das entradas) muda.
+em_cache <- function(nome, chave, expr) {
+  f <- file.path(NB_CACHE, paste0(nome, ".rds"))
+  if (file.exists(f)) { x <- readRDS(f); if (identical(x$chave, chave)) return(x$valor) }
+  valor <- expr; saveRDS(list(chave = chave, valor = valor), f); valor
+}
+AZUL <- "#2a78d6"; LARANJA <- "#eb6834"
+theme_set(theme_minimal(base_size = 12) + theme(plot.title.position = "plot", panel.grid.minor = element_blank()))
+```
+
+# Preparação dos dados
+
+A preparação lê o Parquet, confere as identidades contábeis, constrói a resposta e os
+perfis e calcula os contextos institucionais. Também marca um ano por curso como
+**reserva**, usada apenas na seção opcional de validação. O resultado é gravado em
+`data/processed/modelo.rds` (ignorado pelo Git), lido pelas funções da biblioteca.
+
+```{r}
+#| label: preparacao
+d0 <- as.data.table(nanoparquet::read_parquet("data/raw/cursos_ano.parquet"))
+contagens <- c("matriculas", "trancados", "desvinculados", "transferidos", "falecidos", "vinculos", paste0("mat_", PROFILES))
+for (v in contagens) set(d0, j = v, value = as.numeric(d0[[v]]))
+stopifnot(!anyDuplicated(d0[, .(co_curso, ano)]),
+          all(d0$vinculos == d0$matriculas + d0$trancados + d0$desvinculados + d0$transferidos + d0$falecidos),
+          all(d0$poucos_alunos == as.integer(d0$vinculos < 30)))
+n_original <- nrow(d0)
+d0 <- d0[matriculas > 0]
+stopifnot(all(d0[modalidade == "EAD", mat_noturno] == 0))   # noturno é zero estrutural no EAD
+# Fatores com as categorias de referência do modelo
+for (v in CONTROLS) d0[[v]] <- relevel(factor(d0[[v]]), ref = REFERENCES[[v]])
+# Perfis: proporção dos matriculados, em unidades de 10 pp (deficiência: 1 pp)
+for (j in seq_along(PROP)) d0[[PROP[j]]] <- d0[[paste0("mat_", PROFILES[j])]] / d0$matriculas / SCALE[j]
+d0[, `:=`(co_curso = factor(co_curso), co_ies = factor(co_ies))]
+setorder(d0, co_curso, ano)
+d0 <- d0[, unique(c("co_curso", "co_ies", CONTROLS, contagens, "presente_5_anos", "poucos_alunos", PROP)), with = FALSE]
+d0[, linha_original := .I]
+# Contextos da IES: médias dos perfis (anos com pesos iguais por curso, cursos com pesos iguais
+# por IES), média de log(N), fração EAD e log do número de cursos; padronizados entre IES.
+a <- d0[, c(lapply(.SD, mean), list(logN = mean(log(vinculos)), ead = mean(modalidade == "EAD"))), by = .(co_ies, co_curso), .SDcols = PROP]
+ctx <- a[, c(lapply(.SD, mean), list(log_n_cursos = log(.N))), by = co_ies, .SDcols = c(PROP, "logN", "ead")]
+setnames(ctx, c(PROP, "logN", "ead", "log_n_cursos"), CTX)
+for (v in CTX) ctx[, (v) := (get(v) - mean(get(v))) / sd(get(v))]
+for (v in CTX) d0[, (v) := ctx[[v]][match(co_ies, ctx$co_ies)]]
+# Reserva: um ano sorteado por par IES/curso com pelo menos dois anos (só para a seção opcional)
+set.seed(20261022L)
+reservadas <- d0[, if (.N >= 2L) .(linha = sample(linha_original, 1L)) else .(linha = integer()), by = .(co_ies, co_curso)]$linha
+d0[, validacao := linha_original %in% reservadas]
+d0[, `:=`(eventos_resposta = desvinculados + trancados, demais_vinculos = vinculos - desvinculados - trancados)]
+stopifnot(all(d0$eventos_resposta < d0$vinculos))           # matrículas > 0 implica Y < N
+# Grava só se mudou: preserva o hash do arquivo usado na verificação dos modelos salvos.
+if (!file.exists(BASE_PATH) || !isTRUE(all.equal(readRDS(BASE_PATH), d0, check.attributes = FALSE))) atomic_rds(d0, BASE_PATH)
+d <- populacao(POP)                                          # aplica presente_5_anos == 1 e ≥ 30 vínculos
+tab(data.table(Etapa = c("Base original", "Matrículas positivas", "População analisada"),
+               `Curso-anos` = c(n_original, nrow(d0), nrow(d)),
+               Cursos = c(NA, uniqueN(d0$co_curso), uniqueN(d$co_curso)),
+               IES = c(NA, uniqueN(d0$co_ies), uniqueN(d$co_ies))))
+```
+
+**Resposta.** $Y$ = desvinculados + trancados; $N$ = vínculos. Como há pelo menos uma
+matrícula, nunca ocorre $Y = N$.
+
+**População.** Cursos presentes nos cinco anos e curso-anos com 30 vínculos ou mais: os
+resultados valem para cursos estáveis e não muito pequenos. Os contextos institucionais
+são calculados antes do filtro, com todos os cursos da IES.
+
+# O modelo
+
+Para o curso $i$ da instituição $j$ no ano $t$:
+
+$$
+\begin{aligned}
+Y_{it} \mid p_{it} &\sim \text{Binomial}(N_{it}, p_{it}) \ \text{condicionado a } Y_{it} < N_{it}, \qquad p_{it} \sim \text{Beta}(\mu_{it}, \phi_{it}),\\
+\operatorname{logit}\mu_{it} &= \mathbf{x}_{it}^\top\boldsymbol\beta + u_j + u_i, \qquad u_j \sim N(0,\sigma^2_{\text{IES}}),\ u_i \sim N(0, \sigma^2_{\text{curso}}),\\
+\log\phi_{it} &= \mathbf{z}_{it}^\top\boldsymbol\gamma + v_j + v_i, \qquad v_j \sim N(0,\tau^2_{\text{IES}}),\ v_i \sim N(0, \tau^2_{\text{curso}}).
+\end{aligned}
+$$
+
+- **$\mu$ (média):**
+  - ano, modalidade, categoria administrativa, organização acadêmica, grau e área Cine;
+  - sete perfis dos matriculados;
+  - ano × modalidade e porte (log N) por modalidade;
+  - dez contextos da IES;
+  - efeitos aleatórios de IES e de curso.
+- **Contextos da IES:** as médias institucionais dos perfis fazem com que os
+  coeficientes dos perfis comparem cursos **dentro** da instituição (correção de
+  Mundlak).
+- **$\phi$ (precisão):** quanto a taxa oscila em torno da média. Depende de ano ×
+  modalidade e do porte, e tem **efeitos aleatórios próprios de IES e de curso**. É o
+  que diferencia o modelo adotado (`dispre`) do modelo de comparação (`base`), que só
+  tem efeitos na média.
+- **Truncagem em $Y < N$:** remove a probabilidade de "todos saíram", que é impossível
+  nesta população. Com N ≥ 30 ela quase nunca importa, mas mantém o modelo coerente com
+  os dados.
+
+```{r}
+#| label: desenho
+des <- design("dispre", d)
+tab(data.table(Componente = c("Coeficientes da média", "Coeficientes da dispersão", "Variâncias aleatórias (dispre)",
+                              "Efeitos aleatórios integrados (dispre)"),
+               Quantidade = c(ncol(des$X), ncol(des$Z), 4L, 2L * (nlevels(d$co_ies) + nlevels(d$co_curso)))))
+```
+
+## Verossimilhança em C++ e testes
+
+A verossimilhança está escrita para o TMB, que calcula derivadas automaticamente e
+integra os efeitos aleatórios pela aproximação de Laplace:
+
+```{r}
+#| label: cpp
+#| class-output: cpp
+cat(readLines("scripts/modelo/bb_truncada_dispre.cpp"), sep = "\n")
+```
+
+Antes de ajustar, conferimos a implementação em um exemplo pequeno com parâmetros
+conhecidos:
+
+```{r}
+#| label: testes
+disp_compile()
+set.seed(SEED)
+n <- 400; Nt <- sample(c(1:5, 10, 30, 200), n, TRUE); yt <- vapply(Nt, function(k) sample(0:(k - 1), 1), numeric(1))
+dt <- list(X = cbind(1, rnorm(n)), Z = cbind(1, rnorm(n)), y = yt, N = Nt, ies = sample(0:2, n, TRUE), curso = sample(0:5, n, TRUE), n_ies = 3L)
+bt <- rnorm(9, 0, .4); bdt <- rnorm(9, 0, .3)
+ot <- TMB::MakeADFun(dt, list(beta = c(-.5, .4), betadisp = c(1, .3), theta = log(c(.4, .3, .2, .2)), b = bt, bd = bdt), DLL = DISP_DLL, silent = TRUE)
+mut <- plogis(drop(dt$X %*% c(-.5, .4)) + bt[dt$ies + 1] + bt[3 + dt$curso + 1])
+phit <- exp(drop(dt$Z %*% c(1, .3)) + bdt[dt$ies + 1] + bdt[3 + dt$curso + 1])
+# Referência independente: produtos (Pochhammer), sem funções gama
+lpoch <- function(x, m) if (m == 0) 0 else sum(log(x + 0:(m - 1)))
+lbb <- function(k, Nn, a, b) lchoose(Nn, k) + lpoch(a, k) + lpoch(b, Nn - k) - lpoch(a + b, Nn)
+ref <- vapply(seq_len(n), function(i) if (Nt[i] == 1) 0 else {
+  a <- mut[i] * phit[i]; b <- (1 - mut[i]) * phit[i]; lbb(yt[i], Nt[i], a, b) - log1p(-exp(lbb(Nt[i], Nt[i], a, b))) }, numeric(1))
+p <- ot$par; h <- 1e-5
+fd <- vapply(seq_along(p), function(j) { pp <- pm <- p; pp[j] <- pp[j] + h; pm[j] <- pm[j] - h; (ot$fn(pp) - ot$fn(pm)) / (2 * h) }, numeric(1))
+testes <- data.table(Teste = c("Densidade truncada contra produtos exatos (400 casos, N de 1 a 200)", "Gradiente automático contra diferenças finitas"),
+                     `Erro máximo` = c(max(abs(ot$report()$logprob - ref)), max(abs(ot$gr(p) - fd))))
+stopifnot(all(testes$`Erro máximo` < 1e-4))
+tab(testes[, .(Teste, `Erro máximo` = formatC(`Erro máximo`, format = "e", digits = 1))])
+```
+
+Os erros são da ordem do arredondamento numérico: a implementação calcula exatamente a
+densidade descrita.
+
+# Ajuste
+
+Ajustamos dois modelos na mesma população:
+
+- **`base`**: efeitos aleatórios só na média;
+- **`dispre`**: efeitos aleatórios também na dispersão (o modelo adotado).
+
+O `base` parte de uma regressão logística comum, e o `dispre` parte do `base`. A
+otimização usa `nlminb` sobre a log-verossimilhança marginal de Laplace.
+
+```{r}
+#| label: ajuste-funcoes
+ajustar <- function(v, linhas, inicio) {
+  ds <- design(v, d)
+  dd <- list(X = ds$X[linhas, , drop = FALSE], Z = ds$Z[linhas, , drop = FALSE], y = d$eventos_resposta[linhas],
+             N = d$vinculos[linhas], ies = as.integer(d$co_ies[linhas]) - 1L, curso = as.integer(d$co_curso[linhas]) - 1L,
+             n_ies = nlevels(d$co_ies))
+  vm <- variant_map(v, nlevels(d$co_ies), nlevels(d$co_curso))
+  if (length(vm$map)) inicio$bd[is.na(vm$map$bd)] <- 0
+  obj <- TMB::MakeADFun(dd, inicio, random = vm$random, map = vm$map, DLL = DISP_DLL, silent = TRUE)
+  escala <- rep(.05, length(obj$par))
+  escala[names(obj$par) == "beta"] <- pmin(1, .05 / pmax(sqrt(colMeans(dd$X^2)), .05))
+  inicio_t <- proc.time()[[3]]
+  fit <- nlminb(obj$par, obj$fn, obj$gr, scale = 1 / escala, control = list(iter.max = 1500L, eval.max = 2000L, rel.tol = 1e-7))
+  grad <- obj$gr(fit$par); par <- obj$env$parList(x = fit$par, par = obj$env$last.par)
+  # Efeitos de dispersão fixados por mapa (no base) ainda somam sua densidade ao objetivo: remover.
+  fit$objective <- fit$objective + fixed_constant(par$theta, vm$fixos)
+  list(schema = 1L, variante = v, parameters = par, fit = fit, gradient = grad, n = length(linhas), k = length(fit$par),
+       AIC = 2 * fit$objective + 2 * length(fit$par), colnames = list(X = colnames(dd$X), Z = colnames(dd$Z)),
+       levels = list(co_ies = levels(d$co_ies), co_curso = levels(d$co_curso)), segundos = proc.time()[[3]] - inicio_t)
+}
+inicio_logistica <- function(v, linhas) {
+  ds <- design(v, d); nl <- nlevels(d$co_ies) + nlevels(d$co_curso)
+  g <- suppressWarnings(glm.fit(ds$X[linhas, ], d$eventos_resposta[linhas] / d$vinculos[linhas],
+                                weights = d$vinculos[linhas], family = binomial()))
+  list(beta = unname(g$coefficients), betadisp = c(log(20), rep(0, ncol(ds$Z) - 1)),
+       theta = log(c(.5, .3, .1, .1)), b = rep(0, nl), bd = rep(0, nl))
+}
+# Reaproveita um ajuste salvo se existir e for compatível; senão ajusta e salva.
+obter <- function(v, etapa, inicio_fun) {
+  path <- variant_path(v, etapa, POP)
+  if (!REAJUSTAR && file.exists(path)) {
+    m <- readRDS(path); ds <- design(v, d)
+    if (identical(m$colnames$X, colnames(ds$X)) && identical(m$colnames$Z, colnames(ds$Z))) return(m)
+  }
+  linhas <- if (etapa == "treino") which(!d$validacao) else seq_len(nrow(d))
+  m <- ajustar(v, linhas, inicio_fun(linhas)); atomic_rds(m, path); m
+}
+```
+
+```{r}
+#| label: ajuste
+m_base   <- obter("base", "completo", function(l) inicio_logistica("base", l))
+m_dispre <- obter("dispre", "completo", function(l) { p <- m_base$parameters; p$theta[3:4] <- log(.1); p })
+aj <- rbindlist(lapply(list(m_base, m_dispre), function(m) data.table(
+  Modelo = m$variante, Parâmetros = m$k, `Log-verossimilhança` = -m$fit$objective, AIC = m$AIC,
+  Convergiu = m$fit$convergence == 0, `Gradiente máximo` = max(abs(m$gradient)))))
+aj[, `ΔAIC` := AIC - min(AIC)]
+tab(aj[, .(Modelo, Parâmetros, `Log-verossimilhança` = br(`Log-verossimilhança`, 0), AIC = br(AIC, 0),
+           `ΔAIC` = br(`ΔAIC`, 0), Convergiu, `Gradiente máximo` = br(`Gradiente máximo`, 1))], align = "lrrrrlr")
+th <- exp(m_dispre$parameters$theta)
+```
+
+**Leitura.**
+
+- Os efeitos aleatórios na dispersão melhoram o AIC em
+  **`r br(aj[Modelo == "base"]$ΔAIC, 0)`** pontos com apenas dois parâmetros a mais.
+- Os desvios-padrão da log-precisão são **`r br(th[3], 2)` entre IES** e
+  **`r br(th[4], 2)` entre cursos**.
+- Ou seja, a estabilidade das taxas de um ano para outro varia muito, sobretudo **de
+  uma instituição para outra**. Tratar todas como igualmente estáveis era o que
+  produzia as caudas mal ajustadas do modelo anterior.
+
+# Diagnóstico por simulação
+
+Simulamos `r B` vezes os dados a partir de cada modelo ajustado e comparamos com os dados
+reais em três níveis:
+
+- **condicional:** usa os efeitos estimados de cada IES e curso;
+- **IES fixa:** mantém os efeitos de IES e sorteia os de curso;
+- **marginal:** sorteia todos os efeitos.
+
+Os resíduos são **PIT aleatorizados**. Num modelo adequado, eles seguem uma distribuição
+uniforme, e o worm-plot correspondente fica plano em torno de zero.
+
+```{r}
+#| label: diagnostico-funcao
+gh <- function(k) { J <- matrix(0, k, k); J[cbind(seq_len(k - 1), 2:k)] <- sqrt(seq_len(k - 1)); e <- eigen(J + t(J), symmetric = TRUE)
+  list(x = e$values, w = e$vectors[1, ]^2) }
+diagnosticar <- function(m) {
+  v <- m$variante; ds <- design(v, d); y <- d$eventos_resposta; N <- d$vinculos; n <- nrow(d)
+  ni <- nlevels(d$co_ies); nc <- nlevels(d$co_curso); ii <- as.integer(d$co_ies); ci <- as.integer(d$co_curso)
+  b <- m$parameters$b; bd <- m$parameters$bd; th <- exp(m$parameters$theta); fx <- variant_map(v, ni, nc)$fixos
+  sm <- th[1:2]; sp <- ifelse(fx > 0, 0, th[3:4])
+  eta <- drop(ds$X %*% m$parameters$beta); lphi <- drop(ds$Z %*% m$parameters$betadisp)
+  ctx <- list(condicional = list(em = eta + b[ii] + b[ni + ci], ep = lphi + bd[ii] + bd[ni + ci], sm = 0, sp = 0),
+              ies_fixa = list(em = eta + b[ii], ep = lphi + bd[ii], sm = sm[2], sp = sp[2]),
+              marginal = list(em = eta, ep = lphi, sm = sqrt(sum(sm^2)), sp = sqrt(sum(sp^2))))
+  # Momentos esperados: Gauss-Hermite 2D sobre os efeitos não condicionados
+  momentos <- function(cx, k = 20) {
+    if (cx$sm == 0 && cx$sp == 0) return(trunc_moments(plogis(cx$em), exp(cx$ep), N))
+    q <- gh(k); a1 <- a2 <- numeric(n)
+    for (i in seq_len(k)) for (j in if (cx$sp > 0) seq_len(k) else 1) {
+      w <- q$w[i] * (if (cx$sp > 0) q$w[j] else 1)
+      z <- trunc_moments(plogis(cx$em + cx$sm * q$x[i]), exp(pmin(30, cx$ep + cx$sp * (if (cx$sp > 0) q$x[j] else 0))), N)
+      a1 <- a1 + w * z$mean; a2 <- a2 + w * z$second }
+    list(mean = a1, second = a2)
+  }
+  ies_u <- unique(ii); isum <- function(x) as.vector(rowsum(as.numeric(x), ii, reorder = TRUE)); ni_v <- isum(N)
+  set.seed(SEED); res <- list(); pits <- list()
+  for (k in names(ctx)) {
+    cx <- ctx[[k]]; mo <- momentos(cx); vv <- mo$second - mo$mean^2
+    less <- equal <- integer(n); zeros <- pear <- numeric(B); irate <- matrix(0, length(ies_u), B)
+    for (s in seq_len(B)) {
+      em <- cx$em; ep <- cx$ep
+      if (k != "condicional") { em <- em + rnorm(nc, 0, sm[2])[ci]; ep <- ep + rnorm(nc, 0, sp[2])[ci] }
+      if (k == "marginal")    { em <- em + rnorm(ni, 0, sm[1])[ii]; ep <- ep + rnorm(ni, 0, sp[1])[ii] }
+      ys <- trunc_draw(plogis(em), exp(pmin(30, ep)), N)
+      zeros[s] <- sum(ys == 0); pear[s] <- mean((ys / N - mo$mean)^2 / vv); irate[, s] <- isum(ys) / ni_v
+      less <- less + (ys < y); equal <- equal + (ys == y)
+    }
+    pit <- (less + runif(n) * (equal + 1)) / (B + 1); pits[[k]] <- pit
+    obs_i <- isum(y) / ni_v; lo <- apply(irate, 1, quantile, .025); hi <- apply(irate, 1, quantile, .975)
+    a <- data.table(curso = d$co_curso, ano = d$ano, pit = pit); setorder(a, curso, ano)
+    a[, `:=`(ant = shift(pit), cur_ant = shift(curso))]; a <- a[curso == cur_ant]
+    res[[k]] <- data.table(contexto = k,
+      zeros_obs = sum(y == 0), zeros_sim = mean(zeros), zeros_p025 = quantile(zeros, .025), zeros_p975 = quantile(zeros, .975),
+      pearson_obs = mean((y / N - mo$mean)^2 / vv), pearson_sim = mean(pear), pearson_p025 = quantile(pear, .025), pearson_p975 = quantile(pear, .975),
+      afastamento_qq = max(abs(sort(pit) - ppoints(n))), ies_fora = mean(obs_i < lo | obs_i > hi), cor_temporal = cor(a$pit, a$ant))
+  }
+  list(resumo = rbindlist(res), pit = as.data.table(pits))
+}
+```
+
+```{r}
+#| label: diagnostico
+chave <- function(m) list(par = unlist(m$parameters[c("beta", "betadisp", "theta")]), B = B, n = nrow(d))
+diag_base   <- em_cache("diag_base", chave(m_base), diagnosticar(m_base))
+diag_dispre <- em_cache("diag_dispre", chave(m_dispre), diagnosticar(m_dispre))
+linha <- function(x, k) x$resumo[contexto == k]
+cmp <- data.table(
+  Medida = c("Zeros observados ÷ simulados (condicional)", "Zeros observados ÷ simulados (marginal)",
+             "Pearson² observado ÷ simulado (marginal)", "Maior afastamento do QQ uniforme (condicional)",
+             "IES com taxa fora do envelope de 95% (condicional)", "Correlação dos PIT de anos seguidos (condicional)"),
+  Ideal = c("1", "1", "1", "0", "≈ 5%", "0"),
+  base = c(br(linha(diag_base, "condicional")[, zeros_obs / zeros_sim], 2), br(linha(diag_base, "marginal")[, zeros_obs / zeros_sim], 2),
+           br(linha(diag_base, "marginal")[, pearson_obs / pearson_sim], 2), br(linha(diag_base, "condicional")$afastamento_qq, 3),
+           pct(linha(diag_base, "condicional")$ies_fora), br(linha(diag_base, "condicional")$cor_temporal, 3)),
+  dispre = c(br(linha(diag_dispre, "condicional")[, zeros_obs / zeros_sim], 2), br(linha(diag_dispre, "marginal")[, zeros_obs / zeros_sim], 2),
+             br(linha(diag_dispre, "marginal")[, pearson_obs / pearson_sim], 2), br(linha(diag_dispre, "condicional")$afastamento_qq, 3),
+             pct(linha(diag_dispre, "condicional")$ies_fora), br(linha(diag_dispre, "condicional")$cor_temporal, 3)))
+tab(cmp, align = "lrrr")
+```
+
+```{r}
+#| label: fig-qq
+#| fig-cap: "QQ-plot dos PIT contra a uniforme (100 quantis), por contexto."
+#| fig-height: 4.5
+qq <- rbindlist(lapply(c("base", "dispre"), function(v) {
+  p <- get(paste0("diag_", v))$pit
+  rbindlist(lapply(names(p), function(k) { u <- sort(p[[k]]); ix <- round(seq(1, length(u), length.out = 100))
+    data.table(modelo = v, contexto = k, teorico = ppoints(length(u))[ix], observado = u[ix]) }))
+}))
+ggplot(qq, aes(teorico, observado, colour = modelo)) + geom_abline(linetype = 2, colour = "grey50") + geom_point(size = 1) +
+  facet_wrap(~contexto) + coord_equal() + scale_colour_manual(values = c(base = LARANJA, dispre = AZUL), name = NULL) +
+  labs(x = "Quantil uniforme", y = "Quantil observado do PIT") + theme(legend.position = "bottom")
+```
+
+```{r}
+#| label: fig-worm
+#| fig-cap: "Worm-plots por modalidade e porte (contexto condicional): base (linha de cima) e dispre (linha de baixo). Bandas de 95% de gamlss::wp."
+#| fig-width: 16
+#| fig-height: 6.5
+porte <- cut(d$vinculos, c(0, 99, 999, Inf), labels = c("30–99", "100–999", "1000+"))
+grupos <- CJ(modalidade = c("Presencial", "EAD"), porte = levels(porte), sorted = FALSE)
+probs <- seq(.005, .995, length.out = 100)
+par(mfrow = c(2, nrow(grupos)), mar = c(4, 4, 3, .6))
+for (v in c("base", "dispre")) for (g in seq_len(nrow(grupos))) {
+  u <- get(paste0("diag_", v))$pit$condicional[d$modalidade == grupos$modalidade[g] & porte == grupos$porte[g]]
+  z <- qnorm(pmin(1 - 1e-12, pmax(1e-12, u)))
+  withCallingHandlers(invisible(gamlss::wp(resid = z, pch = NA_integer_, bg = NA, line = TRUE, col = NA, xlim.all = 3, ylim.all = 1)),
+    warning = function(w) if (grepl("Some points are missed out", conditionMessage(w), fixed = TRUE)) invokeRestart("muffleWarning"))
+  q <- qnorm(probs); points(q, quantile(z, probs, type = 8) - q, pch = 16, cex = .5, col = if (v == "base") LARANJA else AZUL)
+  abline(h = 0, lty = 2, col = "grey55"); title(main = sprintf("%s\n%s | %s (n=%s)", v, grupos$modalidade[g], grupos$porte[g], length(u)), cex.main = .85)
+}
+```
+
+**Leitura.**
+
+- O modelo anterior previa cerca de **metade dos cursos sem nenhuma saída**; o
+  `dispre` chega perto dos zeros observados.
+- Os PIT condicionais ficam praticamente uniformes, e o S dos worm-plots desaparece na
+  maioria dos grupos.
+- **O que continua imperfeito:** cursos com 1.000 ou mais vínculos e o nível marginal,
+  que ignora os efeitos específicos de cada curso.
+
+# Hessiana, estabilidade e intervalos de confiança
+
+Para que os erros-padrão façam sentido, o otimizador precisa ter chegado de fato ao
+máximo. Por isso o notebook:
+
+1. calcula a Hessiana dos parâmetros populacionais por diferenças finitas do gradiente
+   de Laplace;
+2. dá um passo de Newton;
+3. confere que o gradiente ficou próximo de zero;
+4. obtém intervalos de Wald.
+
+```{r}
+#| label: hessiana
+hpath <- file.path(VAR <- "outputs/modelo/variantes/filtrada", "dispre/inferencia/hessiana.rds")
+mpath <- variant_path("dispre", "completo", POP)
+inf <- if (!REAJUSTAR && file.exists(hpath) && identical(readRDS(hpath)$modelo, hash(mpath))) readRDS(hpath) else {
+  vm <- variant_map("dispre", nlevels(d$co_ies), nlevels(d$co_curso))
+  dd <- list(X = des$X, Z = des$Z, y = d$eventos_resposta, N = d$vinculos, ies = as.integer(d$co_ies) - 1L,
+             curso = as.integer(d$co_curso) - 1L, n_ies = nlevels(d$co_ies))
+  obj <- TMB::MakeADFun(dd, m_dispre$parameters, random = vm$random, map = vm$map, DLL = DISP_DLL, silent = TRUE)
+  p0 <- m_dispre$fit$par; f0 <- obj$fn(p0); g0 <- obj$gr(p0)
+  H <- optimHess(p0, obj$fn, obj$gr); H <- (H + t(H)) / 2
+  passo <- solve(H, g0); p1 <- p0; f1 <- f0
+  for (a in c(1, .5, .25)) { pt <- p0 - a * passo; ft <- obj$fn(pt); if (is.finite(ft) && ft < f1) { p1 <- pt; f1 <- ft; break } }
+  x <- list(H = H, V = solve(H), par_antes = p0, par_newton = p1, objetivo = c(antes = f0, newton = f1),
+            gradiente = list(antes = g0, newton = obj$gr(p1)), autovalores = eigen(H, TRUE, only.values = TRUE)$values, modelo = hash(mpath))
+  dir.create(dirname(hpath), recursive = TRUE, showWarnings = FALSE); atomic_rds(x, hpath); x
+}
+tab(data.table(Verificação = c("Maior |gradiente| antes do passo de Newton", "Maior |gradiente| depois",
+                               "Menor autovalor da Hessiana (positivo = máximo bem definido)", "Variação do objetivo no passo"),
+               Valor = c(br(max(abs(inf$gradiente$antes)), 2), br(max(abs(inf$gradiente$newton)), 3),
+                         br(min(inf$autovalores), 2), formatC(diff(inf$objetivo), format = "e", digits = 1))))
+```
+
+```{r}
+#| label: coeficientes
+nomes <- names(inf$par_newton); termos <- nomes
+termos[nomes == "beta"] <- m_dispre$colnames$X; termos[nomes == "betadisp"] <- paste0("disp:", m_dispre$colnames$Z)
+termos[nomes == "theta"] <- c("logDP_media_IES", "logDP_media_curso", "logDP_disp_IES", "logDP_disp_curso")
+ep <- sqrt(pmax(diag(inf$V), 0))
+cf <- data.table(termo = termos, est = inf$par_newton, ep = ep)[, `:=`(rc = exp(est), inf = exp(est - 1.96 * ep), sup = exp(est + 1.96 * ep))]
+fwrite(cf, file.path(VAR, "dispre/inferencia/tabelas/coeficientes_notebook.csv"))
+p_media <- sum(d$eventos_resposta) / sum(d$vinculos); esc <- 100 * p_media * (1 - p_media)   # pp por unidade de logit
+rotulo <- c(p_25_anos_ou_mais = "25 anos ou mais", p_ppi = "Pretos, pardos e indígenas", p_escola_publica = "Egressos de escola pública",
+            p_noturno = "No turno noturno", p_deficiencia = "Com deficiência (+1 pp)", p_reserva_vagas = "Ingresso por reserva de vagas",
+            p_feminino = "Mulheres")
+pf <- cf[termo %in% names(rotulo)][, `:=`(perfil = rotulo[termo], pp = esc * est, pp_inf = esc * (est - 1.96 * ep), pp_sup = esc * (est + 1.96 * ep))]
+setorder(pf, -est)
+tab(pf[, .(`Perfil (+10 pp no curso)` = perfil, `Razão de chances` = br(rc, 3), `IC 95%` = paste0(br(inf, 3), "–", br(sup, 3)),
+           `≈ pp na taxa` = paste0(ifelse(pp > 0, "+", ""), br(pp, 2)))], align = "lrrr")
+```
+
+```{r}
+#| label: fig-perfis
+#| fig-cap: "Variação aproximada da taxa anual para +10 pp de cada perfil, com IC 95%."
+#| fig-height: 5
+pf[, perfil := factor(perfil, levels = perfil[order(pp)])]
+ggplot(pf, aes(pp, perfil)) + geom_vline(xintercept = 0, colour = "grey40") +
+  geom_errorbarh(aes(xmin = pp_inf, xmax = pp_sup), height = 0, colour = AZUL, linewidth = 1.4) + geom_point(colour = AZUL, size = 3) +
+  geom_text(aes(x = ifelse(pp > 0, pp_sup, pp_inf), label = paste0(ifelse(pp > 0, "+", ""), br(pp, 2), " pp"),
+                hjust = ifelse(pp > 0, -.15, 1.15)), size = 3.8) +
+  scale_x_continuous(limits = c(-.85, .95)) + labs(x = "Pontos percentuais na taxa anual", y = NULL,
+  subtitle = paste0("Comparando cursos da mesma instituição; taxa média ", pct(p_media)))
+```
+
+**Como ler.**
+
+- A **razão de chances** compara as chances de desvínculo ou trancamento quando o perfil
+  aumenta 10 pp no curso, mantendo constantes as demais variáveis, a instituição e o
+  próprio curso.
+- A coluna em pp é uma aproximação local, válida na taxa média.
+- Perfis mais velhos, PPI, de escola pública e do noturno se associam a taxas maiores;
+  mulheres e reserva de vagas, a taxas menores.
+- Com 150 mil observações, quase tudo é estatisticamente significativo. O **tamanho**
+  dos efeitos importa mais que os valores-p.
+
+```{r}
+#| label: fig-ead
+#| fig-cap: "Esquerda: taxas observadas por modalidade. Direita: razão de chances da interação ano × EAD no modelo (2020 = 1)."
+#| layout-ncol: 2
+#| fig-width: 7
+#| fig-height: 5
+ev <- d[, .(taxa = sum(eventos_resposta) / sum(vinculos)), by = .(ano = as.integer(as.character(ano)), modalidade)]
+print(ggplot(ev, aes(ano, 100 * taxa, colour = modalidade)) + geom_line(linewidth = 1.2) + geom_point(size = 2.5) +
+  geom_text(data = ev[ano == 2024], aes(label = paste0(modalidade, " ", br(100 * taxa), "%")), hjust = -.1, colour = "black", size = 3.8) +
+  scale_colour_manual(values = c(EAD = AZUL, Presencial = LARANJA), guide = "none") + scale_x_continuous(limits = c(2020, 2025.3)) +
+  labs(x = NULL, y = "Taxa anual (%)", title = "Taxas observadas"))
+ai <- rbind(data.table(ano = 2020L, rc = 1, inf = NA_real_, sup = NA_real_),
+            cf[grepl("^ano20..:modalidadeEAD$", termo), .(ano = as.integer(substr(termo, 4, 7)), rc, inf, sup)])
+print(ggplot(ai, aes(ano, rc)) + geom_hline(yintercept = 1, colour = "grey40") +
+  geom_errorbar(aes(ymin = inf, ymax = sup), width = 0, colour = AZUL, linewidth = 1.4, na.rm = TRUE) +
+  geom_line(colour = AZUL, alpha = .5) + geom_point(colour = AZUL, size = 3) +
+  labs(x = NULL, y = "Razão de chances (2020 = 1)", title = "Interação ano × EAD no modelo"))
+```
+
+# Os achados da exploração têm base inferencial?
+
+A exploração (notebook 01) comparava grupos sem controles. Abaixo, cada achado é
+confrontado com o que o modelo estima ao comparar cursos semelhantes da mesma
+instituição.
+
+```{r}
+#| label: eda-vs-modelo
+# Diferença bruta noturno − diurno dentro da IES (mesma definição do notebook 01)
+p24 <- d[ano == 2024 & modalidade == "Presencial"]
+p24[, turno := fifelse(p_noturno * SCALE["p_noturno"] >= .7, "Noturno", fifelse(p_noturno * SCALE["p_noturno"] <= .3, "Diurno", NA_character_))]
+tx <- dcast(p24[!is.na(turno), .(t = sum(eventos_resposta) / sum(vinculos)), by = .(co_ies, turno)], co_ies ~ turno, value.var = "t")[!is.na(Noturno) & !is.na(Diurno)]
+bruto_nt <- median(100 * (tx$Noturno - tx$Diurno))
+co <- function(t, dg = 2) cf[termo == t, paste0(br(rc, dg), " (", br(inf, dg), "–", br(sup, dg), ")")]
+nt <- cf[termo == "p_noturno"]
+nt_pp <- 10 * esc * nt$est; nt_inf <- 10 * esc * (nt$est - 1.96 * nt$ep); nt_sup <- 10 * esc * (nt$est + 1.96 * nt$ep)
+tab(data.table(
+  `Achado da exploração (sem controles)` = c(paste0("Noturno − diurno na mesma IES: +", br(bruto_nt), " pp (", nrow(tx), " IES)"),
+    "Mais egressos de escola pública, taxa maior", "EAD se afasta do presencial", "Rede pública abaixo da privada",
+    "Saúde baixa; Engenharia e TIC altas", "ProUni: gradiente só no desvínculo"),
+  `Modelo (IC 95%)` = c(paste0("Curso 100% × 0% noturno: +", br(nt_pp), " pp (", br(nt_inf), " a ", br(nt_sup), ")"),
+    paste0("RC ", co("p_escola_publica", 3), " por +10 pp"),
+    paste0("Ano × EAD: ", co("ano2021:modalidadeEAD"), " (2021) a ", co("ano2024:modalidadeEAD"), " (2024)"),
+    paste0("Federal ", co("categoria_administrativaPública Federal"), "; estadual ", co("categoria_administrativaPública Estadual")),
+    paste0("Saúde ", co("cine_area_geral09"), "; Engenharia ", co("cine_area_geral07"), "; TIC ", co("cine_area_geral06"), " (contra Negócios)"),
+    "Não incluído no modelo"),
+  `Base inferencial` = c("Sim; o efeito cai à metade com os controles", "Sim; efeito pequeno", "Sim; forte", "Sim",
+                         "Em parte; Engenharia e TIC invertem", "Não")), align = "lll")
+```
+
+```{r}
+#| label: fig-noturno
+#| fig-cap: "Noturno − diurno: comparação direta dentro das IES contra estimativa do modelo com controles (IC 95%)."
+#| fig-height: 3.5
+ggplot(data.table(o = factor(c("Comparação direta", "Modelo com controles"), levels = c("Modelo com controles", "Comparação direta")),
+                  pp = c(bruto_nt, nt_pp), inf = c(NA, nt_inf), sup = c(NA, nt_sup)), aes(pp, o, colour = o)) +
+  geom_vline(xintercept = 0, colour = "grey40") + geom_segment(aes(x = 0, xend = pp, yend = o), alpha = .35, linewidth = 1) +
+  geom_errorbarh(aes(xmin = inf, xmax = sup), height = 0, linewidth = 1.6, na.rm = TRUE) + geom_point(size = 4) +
+  geom_text(aes(label = paste0("+", br(pp), " pp")), nudge_y = .3, colour = "black") +
+  scale_colour_manual(values = c("Comparação direta" = LARANJA, "Modelo com controles" = AZUL), guide = "none") +
+  labs(x = "Diferença na taxa anual (pp)", y = NULL)
+```
+
+O modelo confirma o achado do noturno: um curso inteiramente noturno tem taxa
+**`r br(nt_pp)` pp maior** que um diurno comparável da mesma instituição. A diferença bruta
+(`r br(bruto_nt)` pp) era maior porque parte dela vinha da idade e da origem escolar, que
+andam junto com o turno.
+
+# Validação em anos reservados (opcional)
+
+```{r}
+#| label: reserva
+#| eval: !expr isTRUE(params$reserva)
+# Reajusta no treino (um ano por curso fora), sorteia os efeitos latentes da normal conjunta
+# de Laplace (200 sorteios) e avalia a previsão dos anos reservados por log-score e Pearson².
+te <- which(d$validacao); y_te <- d$eventos_resposta[te]; N_te <- d$vinculos[te]
+avaliar <- function(v, inicio) {
+  m <- obter(v, "treino", inicio); tr <- which(!d$validacao); ds <- design(v, d)
+  vm <- variant_map(v, nlevels(d$co_ies), nlevels(d$co_curso))
+  dd <- list(X = ds$X[tr, ], Z = ds$Z[tr, ], y = d$eventos_resposta[tr], N = d$vinculos[tr], ies = as.integer(d$co_ies[tr]) - 1L,
+             curso = as.integer(d$co_curso[tr]) - 1L, n_ies = nlevels(d$co_ies))
+  o <- TMB::MakeADFun(dd, m$parameters, random = vm$random, map = vm$map, DLL = DISP_DLL, silent = TRUE); o$fn(o$par)
+  Q <- Matrix::forceSymmetric(o$env$spHess(o$env$last.par, random = TRUE)); full <- o$env$last.par
+  modo <- unname(full[o$env$random]); tipo <- names(full)[o$env$random]
+  Fq <- Matrix::expand(Matrix::Cholesky(Q, LDL = FALSE, perm = TRUE)); TMB::FreeADFun(o); rm(o, Q); gc()
+  ni <- nlevels(d$co_ies); ii <- as.integer(d$co_ies[te]); ci <- as.integer(d$co_curso[te])
+  eta0 <- drop(ds$X[te, ] %*% m$parameters$beta); lphi0 <- drop(ds$Z[te, ] %*% m$parameters$betadisp)
+  py <- m1 <- m2 <- numeric(length(te)); set.seed(SEED + 202L); S <- 200
+  for (s in seq_len(S)) {
+    x <- modo + as.vector(Matrix::crossprod(Fq$P, Matrix::solve(Matrix::t(Fq$L), rnorm(length(modo)))))
+    b <- x[tipo == "b"]; bd <- m$parameters$bd; if (v != "base") bd[if (length(vm$map)) !is.na(vm$map$bd) else TRUE] <- x[tipo == "bd"]
+    mu <- pmin(1 - 1e-10, pmax(1e-10, plogis(eta0 + b[ii] + b[ni + ci]))); phi <- exp(pmin(30, lphi0 + bd[ii] + bd[ni + ci]))
+    mo <- trunc_moments(mu, phi, N_te)
+    py <- py + trunc_density(y_te, N_te, mu, phi) / S; m1 <- m1 + mo$mean / S; m2 <- m2 + mo$second / S
+  }
+  data.table(Modelo = v, `Log-score médio` = br(mean(log(py)), 3), `Pearson²` = br(mean((y_te / N_te - m1)^2 / (m2 - m1^2)), 2),
+             `Taxa prevista` = pct(sum(m1 * N_te) / sum(N_te), 2), `Taxa observada` = pct(sum(y_te) / sum(N_te), 2))
+}
+r_base <- avaliar("base", function(l) inicio_logistica("base", l))
+r_disp <- avaliar("dispre", function(l) { p <- readRDS(variant_path("base", "treino", POP))$parameters; p$theta[3:4] <- log(.1); p })
+tab(rbind(r_base, r_disp))
+```
+
+`r if (!isTRUE(params$reserva)) "*Seção desligada nesta renderização (parâmetro reserva = false).* "`
+Esta validação separa um ano de cada curso (`r br(sum(d$validacao), 0)` curso-anos),
+reajusta o modelo sem eles e mede a qualidade da previsão desses anos, levando em conta a
+incerteza dos efeitos de cada curso e instituição.
+
+Nas execuções do projeto, o `dispre` teve log-score −4,17 contra −4,38 do `base`, com
+Pearson² de 1,20: previsões um pouco estreitas demais. A validação é **retrospectiva**,
+porque esses anos já orientaram a escolha entre variantes. Não é uma validação
+confirmatória.
+
+# Limitações
+
+- **Associações ecológicas:** o perfil dos matriculados não identifica quem saiu, e os
+  dados não são individuais.
+- **Medida:** inclui trancamento, que pode ser temporário. Não é a evasão oficial do INEP.
+- **População:** cursos estáveis com 30 vínculos ou mais. Os resultados não se estendem a
+  cursos pequenos ou que fecharam.
+- **Variáveis fora do modelo:** FIES (registro falho), ProUni, apoio social, qualidade e
+  contexto territorial.
+- **Ajuste:** persistem desvios em cursos com 1.000 ou mais vínculos e no nível marginal.
+- **Inferência:** intervalos de Wald condicionais à aproximação de Laplace e à
+  especificação. Não houve seleção de variáveis.

@@ -162,6 +162,19 @@ nix develop path:. -c Rscript scripts/modelo/figuras_pitch.R   # figuras do mode
 nix develop path:. -c quarto render pipeline_modelo.qmd   # documento único; -P reexecutar:true refaz tudo
 ```
 
+**Notebooks centrais** (`notebooks/`):
+- `01_EDA_trancamento.qmd` refaz a exploração diretamente do Parquet.
+- `02_modelo_inferencial.qmd` refaz, também a partir do Parquet:
+  - a preparação, idêntica à de `preparar.R`, gravando a base só se o conteúdo mudar;
+  - os testes do `.cpp` contra produtos exatos e diferenças finitas;
+  - os ajustes de `base` e `dispre` (início por regressão logística, depois `nlminb`);
+  - o diagnóstico por simulação, a Hessiana com passo de Newton e os coeficientes;
+  - as figuras e a comparação com a EDA.
+
+Por padrão o notebook 02 reaproveita os ajustes e a Hessiana salvos. Com
+`-P reajustar:true` refaz tudo, e com `-P reserva:true` inclui a validação em anos
+reservados. As simulações ficam em cache em `.cache/notebooks/`.
+
 `pipeline_modelo.qmd`, na raiz, reúne o pipeline em um documento narrativo. Por padrão lê
 os resultados salvos, e com `-P reexecutar:true` executa os scripts na ordem. O Quarto e
 `knitr`/`rmarkdown` estão declarados na flake, com `QUARTO_R` apontando para o R do

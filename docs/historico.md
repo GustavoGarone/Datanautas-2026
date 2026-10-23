@@ -216,6 +216,22 @@ O usuário pediu o repositório o mais limpo possível. Mudanças:
   comparações, a EDA, os resumos das triagens e todo o código.
 - `README.md` reescrito para o modelo adotado e o documento `pipeline_modelo.qmd`.
 
+## Notebooks centrais (23/10)
+
+A pedido do usuário, a análise foi reunida em dois notebooks Quarto que partem só do
+Parquet: `notebooks/01_EDA_trancamento.qmd` e `notebooks/02_modelo_inferencial.qmd`.
+Os resultados conferem com os scripts. As pequenas diferenças nos diagnósticos (por
+exemplo, zeros marginais 1,65 contra 1,66) vêm da sequência aleatória das simulações.
+
+Na primeira renderização, o notebook 02 regravou `data/processed/modelo.rds` por uma
+diferença só de atributo interno (índice do `data.table`). O original foi restaurado por
+`preparar.R` (md5 `8e797a…`, igual ao de `preparacao.json`), o conteúdo foi conferido
+como idêntico e a comparação passou a ignorar atributos.
+
+Os notebooks antigos `01_dicionario_de_dados.ipynb` e `02_EDA.ipynb` foram removidos a
+pedido do usuário, por não serem usados por nenhuma análise. O segundo era só um esboço
+no `dev`; a EDA completa está no branch `sanches`.
+
 ## Pesquisa sobre trancamento
 
 Não foi localizada estimativa nacional defensável da conversão de trancamento

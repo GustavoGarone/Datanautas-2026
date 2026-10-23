@@ -16,9 +16,20 @@ inferir risco individual nem causalidade.
 - diagnósticos por simulação e validação em anos reservados aprovados com limitações;
 - Hessiana positiva definida e intervalos de confiança de Wald.
 
+## Notebooks (comece por aqui)
+
+Dois notebooks Quarto partem **somente dos dados brutos** (`data/raw/cursos_ano.parquet`)
+e refazem todas as análises, com texto explicando cada passo. Abra o `.html` no
+navegador; não é preciso rodar nada.
+
+| Notebook | Conteúdo | Abrir |
+|---|---|---|
+| `notebooks/01_EDA_trancamento.qmd` | Exploração: taxas por rede, modalidade e ano; noturno × diurno na mesma IES; escola pública; ProUni; área. Com e sem trancamento. | [01_EDA_trancamento.html](notebooks/01_EDA_trancamento.html) |
+| `notebooks/02_modelo_inferencial.qmd` | Modelo: preparação, verossimilhança e testes, ajuste, diagnóstico por simulação, Hessiana, coeficientes, figuras e base inferencial dos achados da exploração. | [02_modelo_inferencial.html](notebooks/02_modelo_inferencial.html) |
+
 ## Consultar
 
-- **[Documento completo do pipeline](pipeline_modelo.html)**
+- **[Documento-síntese do pipeline](pipeline_modelo.html)**
   ([fonte Quarto](pipeline_modelo.qmd)): dados, exploração, modelo, testes,
   diagnósticos, resultados e limitações, explicados para leitura.
 - **[Guia para a equipe](docs/guia_equipe.md)**: o que foi feito, achados e material pronto.
@@ -39,8 +50,10 @@ Dependências (R, pacotes e Quarto) declaradas em `flake.nix` e fixadas em
 `flake.lock`. **Nunca instalar imperativamente.** Na raiz:
 
 ```sh
-nix develop -c quarto render pipeline_modelo.qmd                     # documento, a partir dos resultados salvos
-nix develop -c quarto render pipeline_modelo.qmd -P reexecutar:true  # refaz todo o pipeline (horas)
+nix develop -c quarto render notebooks/01_EDA_trancamento.qmd                     # exploração (~1 min)
+nix develop -c quarto render notebooks/02_modelo_inferencial.qmd                  # modelo; reaproveita ajustes salvos (~15 min na 1ª vez)
+nix develop -c quarto render notebooks/02_modelo_inferencial.qmd -P reajustar:true  # refaz os ajustes do zero (horas)
+nix develop -c quarto render pipeline_modelo.qmd                                  # documento-síntese
 ```
 
 Os passos individuais estão em `docs/metodologia.md`. Base derivada, cache e resíduos

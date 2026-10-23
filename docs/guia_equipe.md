@@ -75,12 +75,25 @@ Todas em PNG, com título que já diz o achado e fonte no rodapé.
 | Panorama (rede, ProUni, noturno; com e sem trancamento) | `outputs/eda/graficos/painel_pitch.png` |
 | Outros da exploração | `outputs/eda/graficos/` (por rede e modalidade, evolução anual, área, escola pública) |
 
+### Notebooks (a análise completa, a partir dos dados)
+
+| Notebook | Para que serve |
+|---|---|
+| **`notebooks/01_EDA_trancamento.html`** | A exploração inteira, com gráficos e tabelas: rede, modalidade, evolução, noturno × diurno, escola pública, ProUni, área. |
+| **`notebooks/02_modelo_inferencial.html`** | O modelo inteiro: preparação, testes, ajuste, diagnósticos, coeficientes com IC 95%, figuras e a tabela "esse achado da EDA se sustenta?". |
+
+Basta abrir os `.html` no navegador. Os `.qmd` são as fontes e devem ir na submissão
+como material de análise. Os notebooks antigos `01_dicionario_de_dados.ipynb` e
+`02_EDA.ipynb` (este era só um esboço no `dev`) foram removidos, porque nenhuma análise
+os usava; continuam recuperáveis pelo histórico do Git. O dicionário oficial está em
+`docs/dicionario_dados.pdf`.
+
 ### Documentos
 
 | Documento | Para que serve |
 |---|---|
-| **`pipeline_modelo.html`** | O "material de análise" da submissão. Abre no navegador, explica tudo do zero (dados, exploração, modelo, testes, resultados e limitações) e tem o código recolhido. **É o arquivo para entregar.** |
-| `pipeline_modelo.qmd` | A fonte do HTML acima, em Quarto. Também vai na submissão. |
+| **`pipeline_modelo.html`** | Documento-síntese: a história completa em um arquivo (dados, exploração, modelo, resultados, limitações). Bom para quem quer a visão geral. |
+| `pipeline_modelo.qmd` | A fonte do HTML acima. |
 | `docs/relatorio_entrega.md` | Base de texto para os slides: achados, figuras com sugestão de uso, notas para quem apresenta e limitações. |
 | `entregas_finais/declaracao_uso_ia.txt` | A declaração de uso de IA. **Falta o trecho de vocês** (ver seção 6). |
 | `outputs/eda/tabelas/*.csv` | Números da exploração, se precisarem de algum valor específico. |
@@ -151,7 +164,9 @@ da equipe, e os números foram conferidos contra o código.
 
 ## 8. Se precisarem de mais detalhes
 
-- Documento completo e didático: `pipeline_modelo.html`.
+- Análise completa, a partir dos dados: `notebooks/01_EDA_trancamento.html` e
+  `notebooks/02_modelo_inferencial.html`.
+- Documento-síntese: `pipeline_modelo.html`.
 - Decisões e tentativas descartadas: `docs/historico.md`.
 - Métodos e comandos: `docs/metodologia.md`.
 - Tabela completa de coeficientes:

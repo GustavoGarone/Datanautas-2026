@@ -4,7 +4,7 @@
 
 - Comunicar em português. Implementação autorizada em 21/10/2026; atualizações em 22–23/10.
 - Nunca instalar dependências imperativamente: usar `flake.nix`/`flake.lock` ou shell Nix temporário.
-- Preservar dados originais, PDFs de referência, notebooks, `src/utils.py` e entregas anteriores. Esqueleto do relatório de entrega em `docs/relatorio_entrega.md` (23/10). Slides, pitch, proposta de intervenção e `entregas_finais/declaracao_uso_ia.txt` (vazio) ficam para o final.
+- Preservar dados originais, PDFs de referência, `src/utils.py` e entregas anteriores. Notebooks antigos 01 e 02 removidos em 23/10 a pedido do usuário (sem uso no pipeline; recuperáveis pelo Git). Notebooks centrais, que partem só dos dados brutos: `notebooks/01_EDA_trancamento.qmd` (exploração) e `notebooks/02_modelo_inferencial.qmd` (preparação, ajuste, diagnóstico, Hessiana e figuras; reaproveita ajustes salvos salvo `-P reajustar:true`). Esqueleto do relatório de entrega em `docs/relatorio_entrega.md` (23/10). Slides, pitch, proposta de intervenção e `entregas_finais/declaracao_uso_ia.txt` (vazio) ficam para o final.
 - Memória: rodar no máximo um processo TMB pesado de reserva integrada por vez; ajustes completo e treino podem rodar em paralelo, com duas threads cada.
 - Usuário autorizou a limpeza: manter somente resumo das tentativas descartadas, modelos atuais, PNG e código para regenerar. Sem arquivo histórico pesado. Decisões em `docs/historico.md`; métodos e comandos em `docs/metodologia.md`.
 - Distinguir sucesso computacional, diagnóstico e validação inferencial. Não apresentar hipótese como resultado, associação como causalidade ou IA como revisão humana.

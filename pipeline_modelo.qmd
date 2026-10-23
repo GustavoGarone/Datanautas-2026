@@ -150,7 +150,7 @@ trancamento cai depois de 2021.
 
 # Análise exploratória com trancamento {#sec-eda}
 
-A análise exploratória da equipe (`notebooks/02_EDA.ipynb`, branch `sanches`) usou só o
+A análise exploratória da equipe (`02_EDA.ipynb`, no branch exploratório `sanches`) usou só o
 desvínculo. O script `scripts/eda/eda_composta.R` refaz as mesmas comparações, com as
 mesmas definições de grupos, mostrando **as duas medidas lado a lado**. Para o
 desvínculo, reproduz exatamente os números do notebook original.

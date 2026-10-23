@@ -49,7 +49,7 @@
 [PENDENTE — gráfico descritivo para os slides; leitura: o EAD sobe de 33% para 41%,
 enquanto o presencial cai levemente.]
 
-### 2.1 Análise exploratória da equipe (branch `sanches`, `notebooks/02_EDA.ipynb`)
+### 2.1 Análise exploratória da equipe (`02_EDA.ipynb` do branch `sanches`; refeita em `notebooks/01_EDA_trancamento.qmd`)
 
 A EDA usa o mesmo filtro do modelo (`poucos_alunos == 0` e `presente_5_anos == 1`), com
 152.943 curso-anos. O modelo exclui ainda 459 curso-anos sem matrículas, ficando com
