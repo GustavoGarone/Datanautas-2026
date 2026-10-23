@@ -1,0 +1,87 @@
+{
+  "finalidade": "triagem exploratória de família; não substitui o modelo TMB",
+  "dados": "treino (reserva intocada), N>1",
+  "fracao_IES": 0.02,
+  "semente": 20261021,
+  "n": 3265,
+  "IES": 59,
+  "cursos": 1059,
+  "truncagem_Y_menor_N": false,
+  "efeitos": "random(co_ies) (verossimilhança penalizada, não Laplace)",
+  "dispersao": "~ano * modalidade + modalidade * log(vinculos)",
+  "parametros_extras": "nu/tau constantes",
+  "ranking": [
+    {
+      "familia": "ZIBB",
+      "AIC": 25205.862496434784,
+      "BIC": 25822.496033787291,
+      "gl": 101.2365809524149,
+      "convergiu": true,
+      "segundos": 185.108,
+      "dAIC": 0,
+      "dBIC": 29.617974319735367
+    },
+    {
+      "familia": "BB",
+      "AIC": 25230.677878980336,
+      "BIC": 25792.878059467555,
+      "gl": 92.299916621013523,
+      "convergiu": true,
+      "segundos": 10.935,
+      "dAIC": 24.815382545551984,
+      "dBIC": 0
+    },
+    {
+      "familia": "ZABB",
+      "AIC": 25672.260457700155,
+      "BIC": 26277.440809808235,
+      "gl": 99.356239963927038,
+      "convergiu": false,
+      "segundos": 201.86099999999999,
+      "dAIC": 466.39796126537112,
+      "dBIC": 484.56275034067949
+    },
+    {
+      "familia": "ZABI",
+      "AIC": 48686.265856566271,
+      "BIC": 49359.421190680769,
+      "gl": 110.51611751158285,
+      "convergiu": true,
+      "segundos": 28.544999999999987,
+      "dAIC": 23480.403360131488,
+      "dBIC": 23566.543131213213
+    },
+    {
+      "familia": "ZIBI",
+      "AIC": 48686.265872724987,
+      "BIC": 49359.421206839485,
+      "gl": 110.51611751158285,
+      "convergiu": true,
+      "segundos": 40.424999999999997,
+      "dAIC": 23480.403376290204,
+      "dBIC": 23566.543147371929
+    },
+    {
+      "familia": "BI",
+      "AIC": 49518.112231797822,
+      "BIC": 50035.015795643114,
+      "gl": 84.863288024344058,
+      "convergiu": true,
+      "segundos": 14.860999999999999,
+      "dAIC": 24312.249735363039,
+      "dBIC": 24242.137736175559
+    },
+    {
+      "familia": "DBI",
+      "convergiu": false,
+      "segundos": 215.65300000000002,
+      "erro": "NA's in the working vector or weights for parameter mu\n"
+    }
+  ],
+  "ciclos": 150,
+  "segundos_BB": 10.935,
+  "segundos_familias": 461.03100000000001,
+  "gamlss": "5.4.22",
+  "base": "8e797a430f6152dc9b3f2dfa454a8b0e",
+  "codigo": "d1f2863429e5968f6195086bfcebfcd2"
+}

@@ -1,0 +1,14 @@
+{
+  "populacao": "filtrada",
+  "filtro": "presente_5_anos == 1 & poucos_alunos == 0 (por curso-ano)",
+  "variantes": ["base", "dispre"],
+  "n": 152484,
+  "reserva": 30982,
+  "pit": "exato randomizado, condicional aos modos",
+  "reserva_modos": "treino; curso sem linha de treino usa efeito zero",
+  "codigo": "767a7be97c63433dc008b9b63c4394b1",
+  "modelos": {
+    "base": ["b05583b082290e911065eb9c16cb6d71", "16521e0269ec5ff52c891b947076da00"],
+    "dispre": ["3d706c9bf504acc9886b8b90fa5ce765", "bc9a76c17fdd88a0acda92d84010759b"]
+  }
+}

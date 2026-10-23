@@ -3,38 +3,45 @@
 # Datanautas — Impacta.dev 2026
 
 Associações entre características dos cursos, composição dos matriculados e
-proporção anual de **desvínculo ou trancamento**, Brasil, 2020–2024.
-Dados agregados por curso-ano; não permitem inferir risco individual ou causalidade.
+proporção anual de **desvínculo ou trancamento** ((desvinculados + trancados) ÷
+vínculos), Brasil, 2020–2024. Os dados são agregados por curso-ano: não permitem
+inferir risco individual nem causalidade.
 
-O candidato atual é uma beta-binomial truncada em Y<N, com interceptos de IES
-e curso, controles estruturais, perfis dos matriculados, contexto institucional
-e dispersão por ano, modalidade e porte. Validação interna melhora a avaliação
-de dispersão, mas worm-plots mostram desvios de forma e caudas. **Estabilidade numérica e inferência
-permanecem pendentes**; não houve Hessiana populacional nem seleção nesta rodada.
+**Modelo adotado (`dispre`):**
+- beta-binomial truncada em Y<N, com interceptos aleatórios de IES e de curso **na
+  média e na dispersão**;
+- controles estruturais, sete perfis dos matriculados e contextos institucionais;
+- população: cursos presentes nos cinco anos e curso-anos com 30 vínculos ou mais
+  (152.484 curso-anos);
+- diagnósticos por simulação e validação em anos reservados aprovados com limitações;
+- Hessiana positiva definida e intervalos de confiança de Wald.
 
 ## Consultar
 
-- [Relatório atual e limitações](outputs/modelo/relatorio.md).
-- [QQ em pontos](outputs/modelo/validacao/graficos/QQ_uniforme.png), [resíduos](outputs/modelo/validacao/graficos/residuos.png) e [worm-plots](outputs/modelo/validacao/graficos/worm_modalidade_porte.png).
-- [Modelos salvos](outputs/modelo/modelos/), [verificação](outputs/modelo/verificacao.json) e [proveniência](outputs/modelo/manifesto.json).
-- [Métodos e reprodução](docs/metodologia.md), [histórico resumido](docs/historico.md), [decisões vigentes](AGENTS.md) e [uso de IA](docs/registro_uso_ia_modelagem.md).
+- **[Documento completo do pipeline](pipeline_modelo.html)**
+  ([fonte Quarto](pipeline_modelo.qmd)): dados, exploração, modelo, testes,
+  diagnósticos, resultados e limitações, explicados para leitura.
+- [Esqueleto do relatório de entrega](docs/relatorio_entrega.md) e
+  [declaração de uso de IA](entregas_finais/declaracao_uso_ia.txt).
+- [Exploração com trancamento](outputs/eda/) e
+  [painel para o pitch](outputs/eda/graficos/painel_pitch.png).
+- [Modelo adotado](outputs/modelo/variantes/filtrada/dispre/): ajustes, diagnóstico e
+  [coeficientes](outputs/modelo/variantes/filtrada/dispre/inferencia/tabelas/coeficientes.csv).
+- [Métodos e comandos](docs/metodologia.md), [histórico de decisões](docs/historico.md),
+  [decisões vigentes](AGENTS.md) e [registro de uso de IA](docs/registro_uso_ia_modelagem.md).
+- O modelo anterior (64 parâmetros, base completa) está preservado em
+  [outputs/modelo/](outputs/modelo/relatorio.md) como referência histórica.
 
 ## Executar
 
-Dependências declaradas em `flake.nix` e fixadas em `flake.lock`.
-**Nunca instalar imperativamente.** Na raiz:
+Dependências (R, pacotes e Quarto) declaradas em `flake.nix` e fixadas em
+`flake.lock`. **Nunca instalar imperativamente.** Na raiz:
 
 ```sh
-nix develop path:. -c bash scripts/modelo/run.sh verificar
-nix develop path:. -c bash scripts/modelo/run.sh graficos
-nix develop path:. -c bash scripts/modelo/run.sh reproduzir
+nix develop -c quarto render pipeline_modelo.qmd                     # documento, a partir dos resultados salvos
+nix develop -c quarto render pipeline_modelo.qmd -P reexecutar:true  # refaz todo o pipeline (horas)
 ```
 
-`verificar` confere os artefatos sem reotimizar. `graficos` regenera simulações,
-tabelas e PNG dos modelos salvos. `reproduzir` também prepara os dados e ajusta
-modelos ausentes; `reajustar` força nova otimização. Mais opções na metodologia.
-
-Dados originais, PDFs de referência, notebooks e entregas anteriores preservados.
-Modelos descartados estão documentados somente no resumo histórico. Base derivada
-e cache são regeneráveis e ignorados pelo Git. Apresentação e intervenção ficam
-para uma etapa posterior.
+Os passos individuais estão em `docs/metodologia.md`. Base derivada, cache e resíduos
+de diagnóstico são regeneráveis e ignorados pelo Git. Dados originais, PDFs de
+referência, notebooks e entregas anteriores estão preservados.

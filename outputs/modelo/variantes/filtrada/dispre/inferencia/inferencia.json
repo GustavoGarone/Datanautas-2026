@@ -1,0 +1,17 @@
+{
+  "variante": "dispre",
+  "populacao": "filtrada",
+  "objetivo_antes": 649374.63250314421,
+  "objetivo_newton": 649374.61086288991,
+  "passo_newton": 1,
+  "gradiente_max_antes": 39.011844223663502,
+  "gradiente_max_newton": 0.019865333961114118,
+  "autovalor_min": 7.2507028479483706,
+  "autovalor_max": 4170415.3650555313,
+  "condicao": 575173.94554868224,
+  "hessiana_positiva": true,
+  "metodo": "optimHess sobre gradiente de Laplace (TMB); EP de Wald; sem sdreport dos latentes",
+  "nota": "Exploratório: EP condicionais à especificação e à aproximação de Laplace; associação, não causalidade",
+  "codigo": "ff8d7c75c8867b4107b1b7862d14793f",
+  "modelo": "3d706c9bf504acc9886b8b90fa5ce765"
+}

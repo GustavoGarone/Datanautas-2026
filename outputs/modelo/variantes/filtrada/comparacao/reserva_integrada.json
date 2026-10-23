@@ -1,0 +1,8 @@
+{
+  "populacao": "filtrada",
+  "sorteios": 200,
+  "variantes": ["base", "dispre", "dispre_fase"],
+  "reserva": 30982,
+  "metodo": "mistura preditiva sobre sorteios conjuntos dos latentes (b, bd) da aproximação de Laplace do treino",
+  "codigo": "46600ad530b99ae7cd4059d0449386b6"
+}

@@ -87,6 +87,36 @@ constituem um teste formal do modelo misto. O pacote é usado somente para
 diagnóstico; o ajuste continua em TMB. Ver
 [van Buuren e Fredriks (2001)](https://doi.org/10.1002/sim.746).
 
+Triagem exploratória de famílias (`scripts/modelo/triagem_familias.R`):
+equivalente a `gamlss::chooseDist(type="binom")`, ajusta BI, BB, DBI, ZIBI,
+ZABI, ZIBB e ZABB com a mesma matriz de média e a mesma fórmula de dispersão.
+Usa somente o treino com N>1 e uma subamostra de IES (semente 20261021), sem
+truncagem, com efeitos `random()` penalizados. Opções: `--fracao`, `--ciclos` e
+`--efeitos=ies_curso|ies`. As saídas ficam em `outputs/modelo/triagem/<efeitos>_<fração>/`.
+O ranking por GAIC não seleciona a família automaticamente nem substitui o modelo TMB.
+
+Variantes exploratórias (`scripts/modelo/variantes.R`): o `bb_truncada_dispre.cpp`
+acrescenta efeitos aleatórios normais de IES e curso na log-dispersão, com variâncias
+próprias. Variantes:
+- `base`: especificação vigente, com os efeitos de dispersão fixados em zero;
+- `dispre`: dispersão aleatória por IES e curso;
+- `dispre_ies`: dispersão aleatória só por IES;
+- `dispre_fase`: `dispre` com indicador de curso sem ingressantes;
+- `dispre_fase_n`: acrescenta splines de log N na média e na dispersão.
+
+Cada variante parte da anterior. A opção `--populacao=filtrada` usa
+`presente_5_anos == 1 & poucos_alunos == 0` por curso-ano, mantendo os contextos
+calculados na base completa. O objetivo soma de volta a densidade dos efeitos de
+dispersão fixados por mapa.
+
+Para comparar as variantes:
+- `variantes_diag.R` calcula o PIT exato randomizado da BB truncada (soma do lado
+  menor do suporte, sem Monte Carlo), condicional aos modos, na base completa e na
+  reserva com os modos do treino.
+- `variantes_integrada.R` sorteia os latentes (média e dispersão) da normal
+  conjunta de Laplace do treino, com `Q=P'LL'P`, e avalia a mistura preditiva por
+  PIT, log-score e Pearson.
+
 ## Validação interna e limites
 
 Reservar uma linha por par IES/curso com pelo menos dois anos, semente 20261022:
@@ -120,7 +150,34 @@ nix develop path:. -c bash scripts/modelo/run.sh testar
 nix develop path:. -c bash scripts/modelo/run.sh worm
 nix develop path:. -c bash scripts/modelo/run.sh graficos
 nix develop path:. -c bash scripts/modelo/run.sh reproduzir
+nix develop path:. -c Rscript scripts/modelo/triagem_familias.R --fracao=0.02 --ciclos=50
+nix develop path:. -c Rscript scripts/modelo/triagem_familias.R --fracao=0.02 --ciclos=150 --efeitos=ies
+nix develop path:. -c Rscript scripts/modelo/testar_variantes.R
+nix develop path:. -c Rscript scripts/modelo/variantes.R base completo --populacao=filtrada   # idem treino; depois dispre, dispre_ies, dispre_fase
+nix develop path:. -c Rscript scripts/modelo/variantes_diag.R --populacao=filtrada
+nix develop path:. -c Rscript scripts/modelo/variantes_integrada.R --populacao=filtrada --sorteios=200   # um processo por vez (memória)
+nix develop path:. -c Rscript scripts/modelo/variantes_diagnosticar.R dispre --populacao=filtrada
+nix develop path:. -c Rscript scripts/modelo/variantes_hessiana.R dispre --populacao=filtrada
+nix develop path:. -c quarto render pipeline_modelo.qmd   # documento único; -P reexecutar:true refaz tudo
 ```
+
+`pipeline_modelo.qmd`, na raiz, reúne o pipeline em um documento narrativo. Por padrão lê
+os resultados salvos, e com `-P reexecutar:true` executa os scripts na ordem. O Quarto e
+`knitr`/`rmarkdown` estão declarados na flake, com `QUARTO_R` apontando para o R do
+projeto.
+
+EDA com trancamento: `nix develop path:. -c Rscript scripts/eda/eda_composta.R` refaz as
+análises de `notebooks/02_EDA.ipynb` (branch `origin/sanches`), mantendo as definições de
+grupos (noturno ≥70% e diurno ≤30%; quartis por rede; ProUni na privada presencial 2024
+sem Programas básicos). Usa a população do modelo e três medidas. Saídas em `outputs/eda/`.
+
+Modelo principal desde 23/10: `dispre` na população filtrada. O diagnóstico por
+simulação (`variantes_diagnosticar.R`) reproduz os três contextos de `diagnosticar.R`.
+Os efeitos aleatórios de média e de dispersão são sorteados conforme o contexto, e os
+momentos usam Gauss-Hermite 2D (20 nós, conferidos contra 30: erro 1,8e-7). A
+Hessiana (`variantes_hessiana.R`) é calculada por `optimHess` sobre o gradiente de
+Laplace, seguida de um passo de Newton com retrocesso e de EP de Wald dos 66
+parâmetros.
 
 `verificar` recalcula momentos, Pearson, QQ, calibração e identidades dos arquivos.
 `--likelihood` também reavalia o objetivo TMB dos dois modelos, sem reotimizar.

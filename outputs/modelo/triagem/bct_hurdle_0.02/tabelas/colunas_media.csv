@@ -1,0 +1,46 @@
+coluna,termo
+x01,ano2021
+x02,ano2022
+x03,ano2023
+x04,ano2024
+x05,modalidadeEAD
+x06,categoria_administrativaPrivada sem fins lucrativos
+x07,categoria_administrativaPública Estadual
+x08,categoria_administrativaPública Federal
+x09,organizacao_academicaCentro Universitário
+x10,organizacao_academicaFaculdade
+x11,grau_academicoLicenciatura
+x12,grau_academicoTecnológico
+x13,cine_area_geral00
+x14,cine_area_geral01
+x15,cine_area_geral02
+x16,cine_area_geral03
+x17,cine_area_geral05
+x18,cine_area_geral06
+x19,cine_area_geral07
+x20,cine_area_geral08
+x21,cine_area_geral09
+x22,cine_area_geral10
+x23,p_feminino
+x24,p_ppi
+x25,p_25_anos_ou_mais
+x26,p_escola_publica
+x27,p_deficiencia
+x28,p_reserva_vagas
+x29,p_noturno
+x30,log(vinculos)
+x31,ies_m_p_feminino
+x32,ies_m_p_ppi
+x33,ies_m_p_25_anos_ou_mais
+x34,ies_m_p_escola_publica
+x35,ies_m_p_deficiencia
+x36,ies_m_p_reserva_vagas
+x37,ies_m_p_noturno
+x38,ies_m_logN
+x39,ies_frac_ead
+x40,ies_log_n_cursos
+x41,ano2021:modalidadeEAD
+x42,ano2022:modalidadeEAD
+x43,ano2023:modalidadeEAD
+x44,ano2024:modalidadeEAD
+x45,modalidadeEAD:log(vinculos)

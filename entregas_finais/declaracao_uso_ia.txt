@@ -1,0 +1,68 @@
+DECLARAÇÃO DE USO DE INTELIGÊNCIA ARTIFICIAL
+Equipe Datanautas — Datathon Impacta.dev 2026
+
+O uso de IA é permitido pelo edital. Esta declaração informa as ferramentas usadas,
+as etapas em que foram usadas e como a equipe conferiu o que foi produzido. A
+responsabilidade pelos números e pelas conclusões é da equipe.
+
+1. FERRAMENTAS E MODELOS
+
+- OpenAI Codex, modelo Sol 6.1 (21 e 22/10/2026).
+- Claude Code (Anthropic), modelo Claude Opus 5.5, incluindo subagentes da própria
+  ferramenta (22 e 23/10/2026).
+- [PENDENTE — outros membros da equipe: listar ferramentas usadas nos notebooks de
+  dicionário/EDA, nos slides, no pitch e na proposta de intervenção, ou declarar que não
+  houve uso de IA nessas etapas.]
+
+2. ETAPAS EM QUE A IA FOI USADA (MODELAGEM)
+
+a) Leitura da documentação do desafio (briefing, armadilhas e dicionário de dados) e
+   planejamento estatístico da pergunta, da medida e da população.
+b) Programação em R da preparação dos dados, do modelo e dos diagnósticos:
+   - beta-binomial mista truncada estimada com TMB, com efeitos aleatórios de
+     instituição e curso na média e na dispersão;
+   - código em scripts/modelo/.
+c) Execução dos ajustes, diagnósticos por simulação, validação em anos reservados e
+   worm-plots.
+d) Triagens de alternativas que foram descartadas:
+   - famílias do pacote gamlss;
+   - Box-Cox t, testada por um subagente.
+e) Revisões descritivas:
+   - conferência independente da implementação da verossimilhança;
+   - qualidade dos dados de FIES/ProUni;
+   - composição de desvínculo e trancamento.
+f) Pesquisa bibliográfica pontual (transição trancamento → desvínculo) e revisões dos
+   diagnósticos feitas por subagentes sem acesso ao histórico da análise.
+g) Redação da documentação técnica (docs/) e do esqueleto do relatório
+   (docs/relatorio_entrega.md).
+
+3. DECISÕES HUMANAS
+
+Foram tomadas pela equipe, com base nas evidências apresentadas pela IA:
+- a pergunta, a medida (desvínculo + trancamento ÷ vínculos) e a população analisada
+  (cursos presentes nos cinco anos, curso-anos com 30 vínculos ou mais);
+- as ideias testadas e a adoção do modelo final;
+- a liberação da etapa inferencial.
+
+A IA não decidiu mudanças de escopo por conta própria.
+
+4. COMO O QUE A IA PRODUZIU FOI CONFERIDO
+
+- Identidades contábeis dos dados, chaves e cardinalidade das junções.
+- Implementação da verossimilhança:
+  - conferida contra fórmula exata independente (erro máximo 5e-12);
+  - conferida contra o pacote glmmTMB;
+  - derivadas conferidas por diferenças finitas.
+- Resíduos (PIT) conferidos quanto à uniformidade em dados simulados do próprio modelo.
+- Os números citados no relatório foram conferidos contra as tabelas geradas pelo código.
+- Erros da IA identificados durante o trabalho foram corrigidos e registrados em
+  docs/historico.md, entre eles uma constante no objetivo de um modelo de comparação e
+  um índice incorreto num diagnóstico.
+
+A conferência computacional não substitui revisão humana independente. Os resultados
+são associações em dados agregados por curso, não efeitos causais.
+
+5. REGISTRO DETALHADO
+
+docs/registro_uso_ia_modelagem.md (etapas e conferências), docs/historico.md
+(decisões e tentativas) e docs/metodologia.md (métodos e comandos para reproduzir).

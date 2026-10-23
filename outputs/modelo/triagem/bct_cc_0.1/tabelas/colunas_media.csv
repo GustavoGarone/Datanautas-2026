@@ -1,0 +1,50 @@
+coluna,termo
+x01,ano2021
+x02,ano2022
+x03,ano2023
+x04,ano2024
+x05,modalidadeEAD
+x06,categoria_administrativaEspecial
+x07,categoria_administrativaPrivada sem fins lucrativos
+x08,categoria_administrativaPública Estadual
+x09,categoria_administrativaPública Federal
+x10,categoria_administrativaPública Municipal
+x11,organizacao_academicaCEFET
+x12,organizacao_academicaCentro Universitário
+x13,organizacao_academicaFaculdade
+x14,organizacao_academicaInstituto Federal
+x15,grau_academicoLicenciatura
+x16,grau_academicoTecnológico
+x17,cine_area_geral00
+x18,cine_area_geral01
+x19,cine_area_geral02
+x20,cine_area_geral03
+x21,cine_area_geral05
+x22,cine_area_geral06
+x23,cine_area_geral07
+x24,cine_area_geral08
+x25,cine_area_geral09
+x26,cine_area_geral10
+x27,p_feminino
+x28,p_ppi
+x29,p_25_anos_ou_mais
+x30,p_escola_publica
+x31,p_deficiencia
+x32,p_reserva_vagas
+x33,p_noturno
+x34,log(vinculos)
+x35,ies_m_p_feminino
+x36,ies_m_p_ppi
+x37,ies_m_p_25_anos_ou_mais
+x38,ies_m_p_escola_publica
+x39,ies_m_p_deficiencia
+x40,ies_m_p_reserva_vagas
+x41,ies_m_p_noturno
+x42,ies_m_logN
+x43,ies_frac_ead
+x44,ies_log_n_cursos
+x45,ano2021:modalidadeEAD
+x46,ano2022:modalidadeEAD
+x47,ano2023:modalidadeEAD
+x48,ano2024:modalidadeEAD
+x49,modalidadeEAD:log(vinculos)

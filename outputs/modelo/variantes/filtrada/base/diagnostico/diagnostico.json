@@ -1,0 +1,21 @@
+{
+  "id": "Variante base",
+  "validacao_reservada": true,
+  "n": 152484,
+  "B": 500,
+  "semente": 20261021,
+  "erro_quadratura": 7.9952267029170798e-11,
+  "n_Pearson": 152484,
+  "n_deterministico_N1": 0,
+  "suporte": "0,...,N-1",
+  "hessiana_inferencia": false,
+  "selecao": false,
+  "revisao_visual_pendente": true,
+  "resposta": "desvinculados + trancados",
+  "modelo_md5": "b05583b082290e911065eb9c16cb6d71",
+  "codigo": ["aca2424fe39806a0e2308b3bbf7b10c5", "021802bdc21762619a748b72bb16a472"],
+  "variante": "base",
+  "populacao": "filtrada",
+  "validacao_reservada_nota": "falso: base completa da população; flag só desliga a contagem de pares da base completa",
+  "nota": "Triagem descritiva, sem incerteza dos modos; truncagem condicional aos RE, N1 preservados mas sem variância; fronteira por construção não valida modelo; não corrige toda a seleção"
+}

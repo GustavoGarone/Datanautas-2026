@@ -5,3 +5,6 @@ result
 result-*
 .cache/
 data/processed/
+
+/.quarto/
+outputs/modelo/variantes/**/residuos.rds
