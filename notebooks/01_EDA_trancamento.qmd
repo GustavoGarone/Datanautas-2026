@@ -97,6 +97,19 @@ três filtros:
 
 O preço é que os resultados valem para cursos estáveis e não muito pequenos.
 
+# Distribuição da variável resposta
+
+```{r}
+#| label: histograma-resposta
+d[, taxa_resposta := (desvinculados + trancados) / vinculos]
+ggplot(d, aes(taxa_resposta)) +
+  geom_histogram(bins = 40, fill = "#2a78d6", colour = "white") +
+  scale_x_continuous(labels = rotulo_pct, limits = c(0, 1)) +
+  labs(title = "Distribuição da resposta por curso-ano",
+       subtitle = "Desvínculo + trancamento ÷ vínculos; cada curso-ano conta uma vez",
+       x = "Proporção anual", y = "Número de curso-anos")
+```
+
 # Taxas por rede e modalidade
 
 ```{r}
