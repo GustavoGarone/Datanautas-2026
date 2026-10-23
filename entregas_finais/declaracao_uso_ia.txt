@@ -10,9 +10,6 @@ responsabilidade pelos números e pelas conclusões é da equipe.
 - OpenAI Codex, modelo Sol 6.1 (21 e 22/10/2026).
 - Claude Code (Anthropic), modelo Claude Opus 5.5, incluindo subagentes da própria
   ferramenta (22 e 23/10/2026).
-- [PENDENTE — outros membros da equipe: listar ferramentas usadas nos notebooks de
-  dicionário/EDA, nos slides, no pitch e na proposta de intervenção, ou declarar que não
-  houve uso de IA nessas etapas.]
 
 2. ETAPAS EM QUE A IA FOI USADA (MODELAGEM)
 
@@ -35,6 +32,7 @@ f) Pesquisa bibliográfica pontual (transição trancamento → desvínculo) e r
    diagnósticos feitas por subagentes sem acesso ao histórico da análise.
 g) Redação da documentação técnica (docs/) e do esqueleto do relatório
    (docs/relatorio_entrega.md).
+h) Geração de ilustração do modelo ajustado para visualização didática durante o pitch, além de slides detalhados sobre o modelo que não participarão da apresentação mas estarão disponíveis para a banca.
 
 3. DECISÕES HUMANAS
 
