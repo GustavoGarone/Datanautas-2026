@@ -515,11 +515,32 @@ include_graphics(file.path(VAR, "dispre/figuras/perfis_efeito_pp.png"))
 - Com 150 mil observações, quase tudo é estatisticamente "significativo". Por isso
   destacamos o **tamanho** das associações, não os valores-p.
 
+**Atenção à leitura.** O coeficiente `modalidadeEAD` isolado *não* é a comparação EAD ×
+presencial. Como o modelo tem as interações modalidade × ano e modalidade × porte, ele
+vale só para 2020 e para um curso com N = 1, que não existe nesta população. A comparação
+real combina os três termos,
+
+$$\log \text{RC}_{\text{EAD/presencial}}(\text{ano}, N) = \beta_{\text{EAD}} + \beta_{\text{ano}\times\text{EAD}} + \beta_{\text{EAD}\times\log N}\cdot\log N,$$
+
+e o intervalo usa a matriz de covariância completa da Hessiana:
+
 ```{r}
 #| label: ead
-ead <- cf[grepl("^modalidadeEAD$|^ano20..:modalidadeEAD$", termo)]
-tab(ead[, .(Termo = termo, `Razão de chances` = br(razao_chances_subjacente, 2),
-            `IC 95%` = paste0(br(rc_ic95_inf, 2), " – ", br(rc_ic95_sup, 2)))], align = "lrr")
+hs <- readRDS(file.path(VAR, "dispre/inferencia/hessiana.rds"))
+mX <- readRDS(variant_path("dispre", "completo", POP))$colnames$X
+ib <- which(names(hs$par_newton) == "beta"); pb <- setNames(hs$par_newton[ib], mX)
+Vb <- hs$V[ib, ib]; dimnames(Vb) <- list(mX, mX)
+contraste <- function(ano, N) {
+  w <- setNames(numeric(length(pb)), mX); w["modalidadeEAD"] <- 1; w["modalidadeEAD:log(vinculos)"] <- log(N)
+  if (ano > 2020) w[paste0("ano", ano, ":modalidadeEAD")] <- 1
+  e <- sum(w * pb); s <- sqrt(drop(t(w) %*% Vb %*% w))
+  data.table(ano = ano, N = N, rc = exp(e), inf = exp(e - 1.96 * s), sup = exp(e + 1.96 * s))
+}
+ct <- rbindlist(lapply(c(50, 150, 500, 2000), function(N) rbindlist(lapply(2020:2024, contraste, N = N))))
+ct[, txt := paste0(br(rc, 2), " (", br(inf, 2), "–", br(sup, 2), ")")]
+ctw <- dcast(ct, N ~ ano, value.var = "txt"); setnames(ctw, "N", "Vínculos do curso")
+tab(ctw, caption = "Razão de chances EAD/presencial (IC 95%), cursos comparáveis", align = "lrrrrr")
+ead150 <- ct[N == 150]
 ```
 
 ```{r}
@@ -529,10 +550,23 @@ tab(ead[, .(Termo = termo, `Razão de chances` = br(razao_chances_subjacente, 2)
 include_graphics(file.path(VAR, c("dispre/figuras/ead_presencial_taxas.png", "dispre/figuras/ead_interacao_ano.png")))
 ```
 
-Em 2020, os cursos EAD tinham chances menores que presenciais comparáveis (razão 0,61).
-Mas a interação ano × EAD cresce ano a ano e chega a 1,48 em 2024: **o EAD se afasta do
-presencial ao longo do período**, coerente com a alta de 33% para 41% vista nos dados
-brutos.
+**Leitura.**
+
+- Num curso de porte típico (150 vínculos; a mediana é 182), EAD e presencial comparáveis
+  eram parecidos em 2020: razão de chances `r br(ead150[ano == 2020]$rc, 2)`.
+- A partir de 2021, **o EAD se distancia todo ano** e chega a
+  `r br(ead150[ano == 2024]$rc, 2)` em 2024: chances cerca de
+  `r br(100 * (ead150[ano == 2024]$rc - 1), 0)`% maiores. Para um presencial com taxa de
+  25%, isso corresponde a cerca de
+  `r br(100 * (.25 * ead150[ano == 2024]$rc / (.75 + .25 * ead150[ano == 2024]$rc)), 0)`% no
+  EAD.
+- A diferença é maior em cursos grandes.
+- A figura da direita mostra só o termo ano × EAD, ou seja, **quanto** a diferença mudou
+  desde 2020, e não o nível da diferença.
+- "Comparável" significa mesma rede, organização, grau, área, perfil dos alunos e
+  contexto da IES. Como o noturno é zero no EAD, a comparação é com o presencial diurno.
+  É uma comparação **entre cursos**, coerente com a alta de 33% para 41% nos dados
+  brutos.
 
 ## Os achados exploratórios têm base inferencial? {#sec-eda-inferencia}
 
@@ -546,6 +580,8 @@ avaliado com os demais, a área, o porte, a modalidade e o ano constantes.
 ```{r}
 #| label: eda-vs-modelo
 co <- function(t) cf[termo == t]
+# Contextos da IES estão padronizados: 1 unidade = 1 DP entre IES (em unidades de 10 pp para perfis)
+esc_nt <- fread("outputs/modelo/escalas_contextos.csv")[variavel == "ies_m_p_noturno"]$escala
 rc <- function(t, d = 2) with(co(t), paste0(br(razao_chances_subjacente, d), " (", br(rc_ic95_inf, d), "–", br(rc_ic95_sup, d), ")"))
 nt <- co("p_noturno")
 nt_rc <- paste0(br(exp(10 * nt$estimativa), 2), " (", br(exp(10 * (nt$estimativa - 1.96 * nt$ep)), 2), "–",
@@ -557,19 +593,19 @@ tab(data.table(
     "Mais egressos de escola pública, taxa maior",
     "EAD se afasta do presencial ao longo dos anos",
     "Rede pública abaixo da privada",
-    "Saúde com taxas baixas; Engenharia e TIC altas (só desvínculo)",
+    "Saúde e Agricultura baixas; TIC e Serviços altas (composta)",
     "ProUni: gradiente no desvínculo, plano na medida composta"),
   `O que o modelo estima (IC 95%)` = c(
     paste0("Curso 100% noturno × 0%: RC ", nt_rc, ", ≈ +", br(nt_pp), " pp"),
     paste0("RC ", rc("p_escola_publica", 3), " por +10 pp"),
-    paste0("Ano × EAD: ", rc("ano2021:modalidadeEAD"), " em 2021 até ", rc("ano2024:modalidadeEAD"), " em 2024"),
+    paste0("EAD/presencial (150 vínculos): ", br(ead150[ano == 2020]$rc, 2), " em 2020 → ", ead150[ano == 2024]$txt, " em 2024"),
     paste0("Federal ", rc("categoria_administrativaPública Federal"), "; estadual ",
            rc("categoria_administrativaPública Estadual"), "; municipal ", rc("categoria_administrativaPública Municipal")),
-    paste0("Saúde ", rc("cine_area_geral09"), "; Engenharia ", rc("cine_area_geral07"), "; TIC ",
-           rc("cine_area_geral06"), " (contra Negócios)"),
+    paste0("Saúde ", rc("cine_area_geral09"), "; Agricultura ", rc("cine_area_geral08"), "; TIC ", rc("cine_area_geral06"), "; Serviços ",
+           rc("cine_area_geral10"), " (contra Negócios)"),
     "Não está no modelo"),
   `Base inferencial` = c("Sim; o efeito cai à metade com os controles", "Sim; efeito pequeno", "Sim; forte",
-                         "Sim", "Em parte; Engenharia e TIC invertem", "Não; só descritivo")),
+                         "Sim", "Em parte; Saúde segue baixa, TIC cai abaixo de Negócios", "Não; só descritivo")),
   align = "lll")
 ```
 
@@ -586,10 +622,13 @@ include_graphics(file.path(VAR, "dispre/figuras/noturno_bruto_ajustado.png"))
   instituição.
   - A diferença bruta era maior porque parte dela vinha da idade e da origem escolar, que
     andam junto com o noturno.
-  - Instituições com mais cursos noturnos também têm taxas maiores
-    (RC `r rc("ies_m_p_noturno")` por +10 pp na média da IES).
+  - Instituições com mais cursos noturnos também têm taxas maiores, além do efeito de cada
+    curso: RC `r rc("ies_m_p_noturno")` por **+1 desvio-padrão** (≈ `r br(10 * esc_nt, 0)` pp)
+    na proporção média de noturno da IES, ou cerca de `r br(exp(co("ies_m_p_noturno")$estimativa / esc_nt), 3)`
+    por +10 pp. Os contextos da IES foram padronizados entre instituições.
 - **Área.** A ordem bruta entre áreas não se mantém por inteiro. Depois dos controles,
-  Engenharia e TIC ficam *abaixo* de Negócios. Isso mostra por que comparar taxas brutas
+  a TIC, que nos dados brutos empata com Negócios (30%), fica *abaixo* dela (RC 0,91), e
+  Saúde e Agricultura continuam as mais baixas. Isso mostra por que comparar taxas brutas
   pode enganar.
 - **ProUni.** Não há base inferencial. Incluí-lo exigiria reajustar o modelo, e o
   resultado descritivo já indica que o ProUni muda a composição entre trancar e

@@ -31,7 +31,7 @@ mostra três achados sólidos:
 - **Por que incluir o trancamento?** O trancamento muitas vezes antecede a desistência, e
   as instituições registram de formas diferentes o que é "trancado" e o que é
   "desvinculado". Somando os dois, a comparação fica mais justa. No EAD público, por
-  exemplo, a taxa vai de 13,7% (só desvínculo) para 33,0% (com trancamento).
+  exemplo, a taxa vai de 13,7% (só desvínculo) para 32,9% (com trancamento).
 - **Não é** a evasão oficial do INEP nem "abandono do ensino superior". É saída ou pausa
   **do curso**.
 - **População:** cursos que existiram nos cinco anos (2020–2024) e curso-anos com pelo
@@ -44,7 +44,7 @@ mostra três achados sólidos:
 
 | # | Achado | Dados brutos | Modelo (com controles) |
 |---|---|---|---|
-| 1 | **O EAD se distancia do presencial** | EAD: 33,3% (2020) → 41,4% (2024). Presencial: 27,4% → 24,4% | A diferença EAD − presencial cresce todo ano: razão de chances 1,48 em 2024 |
+| 1 | **O EAD se distancia do presencial** | EAD: 33,3% (2020) → 41,4% (2024). Presencial: 27,4% → 24,4% | Cursos comparáveis de porte típico: razão de chances EAD/presencial de 0,95 (2020) a **1,40** (2024), ou chances ~40% maiores |
 | 2 | **Cursos noturnos perdem mais alunos** | +5,5 pp contra cursos diurnos da mesma instituição (mediana em 589 IES) | **+2,7 pp** para um curso 100% noturno contra um diurno comparável |
 | 3 | **Perfil dos estudantes** | — | Por +10 pp no curso: 25 anos ou mais **+0,6 pp**; PPI **+0,5 pp**; escola pública **+0,4 pp**; mulheres **−0,5 pp**; reserva de vagas **−0,3 pp** |
 
@@ -97,6 +97,57 @@ os usava; continuam recuperáveis pelo histórico do Git. O dicionário oficial 
 | `docs/relatorio_entrega.md` | Base de texto para os slides: achados, figuras com sugestão de uso, notas para quem apresenta e limitações. |
 | `entregas_finais/declaracao_uso_ia.txt` | A declaração de uso de IA. **Falta o trecho de vocês** (ver seção 6). |
 | `outputs/eda/tabelas/*.csv` | Números da exploração, se precisarem de algum valor específico. |
+
+### Como ler os coeficientes (razões de chances)
+
+- **Razão de chances (RC)** compara as chances de desvínculo ou trancamento de dois cursos
+  iguais em tudo, exceto na característica. Acima de 1, a taxa tende a ser maior; abaixo
+  de 1, menor.
+- Com taxa média de 32%, RC 1,13 corresponde a cerca de 1,09 vez a taxa. Por isso também
+  damos os valores em **pontos percentuais**.
+- **Unidades:**
+  - perfis: +10 pp no curso (deficiência: +1 pp);
+  - contextos da IES: +1 desvio-padrão entre instituições;
+  - categorias: contra a referência (2020, presencial, privada com fins lucrativos,
+    universidade, bacharelado, Negócios).
+- **EAD × presencial:** o coeficiente "EAD" sozinho não é essa comparação, porque o
+  modelo tem interações com o ano e com o porte. Num curso de porte típico (150
+  vínculos), comparando cursos semelhantes, a RC EAD/presencial vai de **0,95 em 2020**
+  a **1,40 (1,37–1,44) em 2024**. Ou seja, as chances do EAD ficaram ~40% maiores; para
+  um presencial com 25%, isso dá ~32% no EAD. Em cursos grandes, a distância é maior:
+  1,76 com 2.000 vínculos.
+- A figura "interação ano × EAD" (1,22 a 1,48) mostra **quanto a diferença mudou desde
+  2020**, não a diferença em si.
+
+### Os efeitos aleatórios: instituição e curso
+
+O modelo tem quatro efeitos aleatórios:
+
+| Onde | De quem | Desvio-padrão | O que significa |
+|---|---|---:|---|
+| Média da taxa | IES | 0,51 | A instituição perde mais ou menos alunos do que se esperaria pelas suas características |
+| Média da taxa | Curso | 0,29 | Dentro da instituição, o curso perde mais ou menos que o esperado |
+| Estabilidade da taxa | IES | 1,10 | As taxas da instituição oscilam muito ou pouco de um ano para outro |
+| Estabilidade da taxa | Curso | 0,58 | O mesmo, para o curso |
+
+**Na média (o nível da taxa):**
+- 95% das instituições ficam entre **0,37 e 2,7 vezes** as chances de uma IES típica com
+  as mesmas características. Mesmo comparando cursos com o mesmo perfil de alunos, área
+  e modalidade, a instituição pode quase triplicar ou reduzir a um terço as chances de
+  desvínculo.
+- Cerca de **76% dessa variação não explicada está na instituição** e 24% no curso:
+  *onde* o aluno estuda pesa mais do que *qual curso* ele faz.
+
+**Na estabilidade.** Para um curso com taxa média de 30% e 200 vínculos, a oscilação típica
+de um ano para outro é de ±7,6 pp numa IES de estabilidade mediana, ±5,1 pp numa IES mais
+estável e ±12,1 pp numa menos estável. Em algumas instituições a taxa salta muito sem
+mudança aparente: um sinal possível de registros irregulares ou de gestão instável. O
+modelo não identifica a causa. Esse componente foi o que corrigiu o ajuste do modelo.
+
+**Por que "aleatórios".** São mais de 2 mil IES e 33 mil cursos. Em vez de um coeficiente
+livre para cada um, o modelo estima a variação entre eles e "encolhe" cada estimativa em
+direção à média, conforme a quantidade de dados. Se a proposta usar um ranking de
+instituições, ele deve ser apresentado como **sinal de alerta**, não como nota exata.
 
 ---
 

@@ -231,7 +231,8 @@ ggplot(longo(ci, c("nome_cine_area_geral", "vinculos")), aes(taxa, factor(nome_c
   scale_x_continuous(labels = rotulo_pct) + labs(title = "Taxas por área geral Cine, presencial 2020–2024", x = NULL, y = NULL)
 ```
 
-Saúde e bem-estar tem as menores taxas, e Serviços e Negócios as maiores. Áreas diferem
+Na medida composta, Agricultura (21,7%), Programas básicos e Saúde e bem-estar (22,3%) têm
+as menores taxas; Serviços (35,5%), TIC, Artes e Negócios (≈ 30%), as maiores. Áreas diferem
 em perfil de aluno e de instituição; o notebook 02 mostra que parte da ordem bruta muda
 com os controles.
 

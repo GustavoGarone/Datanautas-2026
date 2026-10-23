@@ -62,8 +62,8 @@ Taxas por rede e modalidade, de 2020 a 2024, somando numeradores e denominadores
 | Rede / modalidade | Desvínculo (EDA) | Desvínculo + trancamento (modelo) |
 | --- | ---: | ---: |
 | Privada EAD | 25,2% | 39,0% |
-| Privada presencial | 16,8% | 28,9% |
-| Pública EAD | 13,7% | 33,0% |
+| Privada presencial | 16,8% | 28,8% |
+| Pública EAD | 13,7% | 32,9% |
 | Pública presencial | 10,8% | 21,8% |
 
 O trancamento muda a leitura: no EAD público, ele mais que dobra a taxa. É um argumento
@@ -179,9 +179,15 @@ e curso, com IC 95% de Wald (conferido):
 | Feminino | 0,976 | 0,974–0,978 |
 
 Outros (conferido):
-- EAD contra presencial em 2020: RC 0,61 (0,58–0,65).
-- A interação ano × EAD cresce até 1,48 em 2024 (1,45–1,52). O EAD se distancia do
-  presencial ao longo do período, coerente com a EDA.
+- **EAD contra presencial**, num curso de porte típico (150 vínculos), comparando cursos
+  semelhantes: RC 0,95 (0,92–0,97) em 2020 → **1,40 (1,37–1,44) em 2024**, ou seja,
+  chances ~40% maiores no EAD. A distância é maior em cursos grandes: 1,76 com 2.000
+  vínculos em 2024.
+- O coeficiente `modalidadeEAD` isolado (0,61) **não** é essa comparação: ele vale para
+  N = 1, por causa da interação com o porte. A figura ano × EAD (1,22 em 2021 a 1,48 em
+  2024) mostra só a **mudança** desde 2020.
+- Contextos da IES estão padronizados: o coeficiente de `ies_m_p_noturno` (RC 1,12) é por
+  +1 desvio-padrão (~33 pp) na proporção média de noturno da IES, ≈ 1,035 por +10 pp.
 
 [PENDENTE:
 - traduzir em pontos percentuais para um curso típico;
@@ -237,8 +243,9 @@ Proposta de três achados. Cada um combina a exploração (sem controles) com o 
 (com controles e comparação dentro da mesma IES) (conferido):
 
 1. **O EAD se distancia do presencial.** A taxa composta do EAD vai de 33,3% (2020) para
-   41,4% (2024); o presencial cai de 27,4% para 24,4%. No modelo, a interação ano × EAD
-   cresce até RC 1,48 (1,45–1,52) em 2024.
+   41,4% (2024); o presencial cai de 27,4% para 24,4%. No modelo, comparando cursos
+   semelhantes de porte típico, a razão de chances EAD/presencial vai de 0,95 em 2020 a
+   **1,40 (1,37–1,44) em 2024**.
 2. **Cursos noturnos perdem mais alunos, mesmo dentro da mesma instituição.** Na
    exploração, a diferença é de +5,5 pp (mediana em 589 IES). No modelo, um curso 100%
    noturno contra um diurno comparável dá RC 1,13 (1,12–1,15), ≈ **+2,7 pp**. Parte da
@@ -251,7 +258,8 @@ Proposta de três achados. Cada um combina a exploração (sem controles) com o 
 
 Base inferencial dos achados exploratórios (detalhe em `pipeline_modelo.html`):
 - **Com base:** noturno, escola pública, EAD × ano, rede.
-- **Em parte:** área Cine. Depois dos controles, Engenharia e TIC ficam abaixo de Negócios.
+- **Em parte:** área Cine. Saúde e Agricultura seguem baixas; a TIC, que nos dados brutos
+  empata com Negócios (≈ 30%), fica abaixo dela depois dos controles (RC 0,91).
 - **Sem base:** ProUni, que não está no modelo. Na medida composta, o gradiente quase
   some.
 

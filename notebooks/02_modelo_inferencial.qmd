@@ -263,6 +263,42 @@ obter <- function(v, etapa, inicio_fun) {
 #| label: ajuste
 m_base   <- obter("base", "completo", function(l) inicio_logistica("base", l))
 m_dispre <- obter("dispre", "completo", function(l) { p <- m_base$parameters; p$theta[3:4] <- log(.1); p })
+```
+
+**Polimento do ótimo.** O `nlminb` para com uma tolerância relativa; para os erros-padrão
+precisamos do máximo exato. Calculamos a Hessiana dos parâmetros populacionais, damos um
+passo de Newton, salvamos o modelo polido (parâmetros e modos latentes) e recalculamos a
+Hessiana nesse ponto final. Tudo o que vem depois usa este "modelo atual". Leva cerca de
+25 minutos; por padrão reaproveita o resultado salvo, se corresponder ao modelo.
+
+```{r}
+#| label: polimento
+VAR <- "outputs/modelo/variantes/filtrada"
+hpath <- file.path(VAR, "dispre/inferencia/hessiana.rds"); mpath <- variant_path("dispre", "completo", POP)
+inf <- if (!REAJUSTAR && file.exists(hpath) && identical(readRDS(hpath)$modelo, hash(mpath))) readRDS(hpath) else {
+  vm <- variant_map("dispre", nlevels(d$co_ies), nlevels(d$co_curso))
+  dd <- list(X = des$X, Z = des$Z, y = d$eventos_resposta, N = d$vinculos, ies = as.integer(d$co_ies) - 1L,
+             curso = as.integer(d$co_curso) - 1L, n_ies = nlevels(d$co_ies))
+  obj <- TMB::MakeADFun(dd, m_dispre$parameters, random = vm$random, map = vm$map, DLL = DISP_DLL, silent = TRUE)
+  p0 <- m_dispre$fit$par; f0 <- obj$fn(p0); g0 <- obj$gr(p0)
+  H <- optimHess(p0, obj$fn, obj$gr); H <- (H + t(H)) / 2
+  passo <- solve(H, g0); p1 <- p0; f1 <- f0
+  for (a in c(1, .5, .25)) { pt <- p0 - a * passo; ft <- obj$fn(pt); if (is.finite(ft) && ft < f1) { p1 <- pt; f1 <- ft; break } }
+  f1 <- obj$fn(p1); g1 <- obj$gr(p1); H0 <- H
+  m_dispre$parameters <- obj$env$parList(x = p1, par = obj$env$last.par); m_dispre$fit$par <- p1
+  m_dispre$fit$objective <- f1; m_dispre$gradient <- g1; m_dispre$AIC <- 2 * f1 + 2 * m_dispre$k
+  atomic_rds(m_dispre, mpath)
+  H <- optimHess(p1, obj$fn, obj$gr); H <- (H + t(H)) / 2
+  x <- list(H = H, H_antes = H0, V = solve(H), par_antes = p0, par_newton = p1, objetivo = c(antes = f0, newton = f1),
+            gradiente = list(antes = g0, newton = g1), autovalores = eigen(H, TRUE, only.values = TRUE)$values, modelo = hash(mpath))
+  dir.create(dirname(hpath), recursive = TRUE, showWarnings = FALSE); atomic_rds(x, hpath); x
+}
+m_dispre <- readRDS(mpath)                                   # modelo atual (polido)
+stopifnot(isTRUE(all.equal(unname(m_dispre$fit$par), unname(inf$par_newton))))
+```
+
+```{r}
+#| label: comparacao-ajustes
 aj <- rbindlist(lapply(list(m_base, m_dispre), function(m) data.table(
   Modelo = m$variante, Parâmetros = m$k, `Log-verossimilhança` = -m$fit$objective, AIC = m$AIC,
   Convergiu = m$fit$convergence == 0, `Gradiente máximo` = max(abs(m$gradient)))))
@@ -416,23 +452,11 @@ máximo. Por isso o notebook:
 3. confere que o gradiente ficou próximo de zero;
 4. obtém intervalos de Wald.
 
+A Hessiana e o passo de Newton foram calculados logo após o ajuste (bloco `polimento`),
+para que todos os resultados usem o mesmo ponto final:
+
 ```{r}
 #| label: hessiana
-hpath <- file.path(VAR <- "outputs/modelo/variantes/filtrada", "dispre/inferencia/hessiana.rds")
-mpath <- variant_path("dispre", "completo", POP)
-inf <- if (!REAJUSTAR && file.exists(hpath) && identical(readRDS(hpath)$modelo, hash(mpath))) readRDS(hpath) else {
-  vm <- variant_map("dispre", nlevels(d$co_ies), nlevels(d$co_curso))
-  dd <- list(X = des$X, Z = des$Z, y = d$eventos_resposta, N = d$vinculos, ies = as.integer(d$co_ies) - 1L,
-             curso = as.integer(d$co_curso) - 1L, n_ies = nlevels(d$co_ies))
-  obj <- TMB::MakeADFun(dd, m_dispre$parameters, random = vm$random, map = vm$map, DLL = DISP_DLL, silent = TRUE)
-  p0 <- m_dispre$fit$par; f0 <- obj$fn(p0); g0 <- obj$gr(p0)
-  H <- optimHess(p0, obj$fn, obj$gr); H <- (H + t(H)) / 2
-  passo <- solve(H, g0); p1 <- p0; f1 <- f0
-  for (a in c(1, .5, .25)) { pt <- p0 - a * passo; ft <- obj$fn(pt); if (is.finite(ft) && ft < f1) { p1 <- pt; f1 <- ft; break } }
-  x <- list(H = H, V = solve(H), par_antes = p0, par_newton = p1, objetivo = c(antes = f0, newton = f1),
-            gradiente = list(antes = g0, newton = obj$gr(p1)), autovalores = eigen(H, TRUE, only.values = TRUE)$values, modelo = hash(mpath))
-  dir.create(dirname(hpath), recursive = TRUE, showWarnings = FALSE); atomic_rds(x, hpath); x
-}
 tab(data.table(Verificação = c("Maior |gradiente| antes do passo de Newton", "Maior |gradiente| depois",
                                "Menor autovalor da Hessiana (positivo = máximo bem definido)", "Variação do objetivo no passo"),
                Valor = c(br(max(abs(inf$gradiente$antes)), 2), br(max(abs(inf$gradiente$newton)), 3),
@@ -500,6 +524,44 @@ print(ggplot(ai, aes(ano, rc)) + geom_hline(yintercept = 1, colour = "grey40") +
   labs(x = NULL, y = "Razão de chances (2020 = 1)", title = "Interação ano × EAD no modelo"))
 ```
 
+## Como comparar EAD e presencial
+
+O coeficiente `modalidadeEAD` isolado **não** é a comparação EAD × presencial. Como há
+interações com o ano e com o porte, ele vale só para 2020 e para N = 1, um curso que não
+existe nesta população. A comparação real soma os três termos, e o intervalo usa a matriz
+de covariância completa:
+
+$$\log \text{RC}_{\text{EAD/presencial}}(\text{ano}, N) = \beta_{\text{EAD}} + \beta_{\text{ano}\times\text{EAD}} + \beta_{\text{EAD}\times\log N}\cdot\log N.$$
+
+```{r}
+#| label: ead-contraste
+ib <- which(names(inf$par_newton) == "beta"); pb <- setNames(inf$par_newton[ib], m_dispre$colnames$X)
+Vb <- inf$V[ib, ib]; dimnames(Vb) <- list(names(pb), names(pb))
+contraste <- function(ano, N) {
+  w <- setNames(numeric(length(pb)), names(pb)); w["modalidadeEAD"] <- 1; w["modalidadeEAD:log(vinculos)"] <- log(N)
+  if (ano > 2020) w[paste0("ano", ano, ":modalidadeEAD")] <- 1
+  e <- sum(w * pb); s <- sqrt(drop(t(w) %*% Vb %*% w))
+  data.table(ano = ano, N = N, rc = exp(e), lo = exp(e - 1.96 * s), hi = exp(e + 1.96 * s))
+}
+ct <- rbindlist(lapply(c(50, 150, 500, 2000), function(N) rbindlist(lapply(2020:2024, contraste, N = N))))
+ct[, txt := paste0(br(rc, 2), " (", br(lo, 2), "–", br(hi, 2), ")")]
+ctw <- dcast(ct, N ~ ano, value.var = "txt"); setnames(ctw, "N", "Vínculos do curso")
+tab(ctw, caption = "Razão de chances EAD/presencial (IC 95%), cursos comparáveis", align = "lrrrrr")
+e150 <- ct[N == 150]
+```
+
+**Leitura.**
+
+- Num curso de porte típico (150 vínculos; mediana 182), EAD e presencial comparáveis
+  eram parecidos em 2020: RC `r br(e150[ano == 2020]$rc, 2)`.
+- Em 2024 a razão chega a **`r br(e150[ano == 2024]$rc, 2)`**: chances cerca de
+  `r br(100 * (e150[ano == 2024]$rc - 1), 0)`% maiores no EAD. Para um presencial com taxa
+  de 25%, isso equivale a cerca de
+  `r br(100 * (.25 * e150[ano == 2024]$rc / (.75 + .25 * e150[ano == 2024]$rc)), 0)`% no EAD.
+- A distância cresce com o porte do curso.
+- A figura acima (direita) mostra só a **mudança desde 2020**, e não o nível da
+  diferença.
+
 # Os achados da exploração têm base inferencial?
 
 A exploração (notebook 01) comparava grupos sem controles. Abaixo, cada achado é
@@ -519,15 +581,15 @@ nt_pp <- 10 * esc * nt$est; nt_inf <- 10 * esc * (nt$est - 1.96 * nt$ep); nt_sup
 tab(data.table(
   `Achado da exploração (sem controles)` = c(paste0("Noturno − diurno na mesma IES: +", br(bruto_nt), " pp (", nrow(tx), " IES)"),
     "Mais egressos de escola pública, taxa maior", "EAD se afasta do presencial", "Rede pública abaixo da privada",
-    "Saúde baixa; Engenharia e TIC altas", "ProUni: gradiente só no desvínculo"),
+    "Saúde e Agricultura baixas; TIC e Serviços altas (composta)", "ProUni: gradiente só no desvínculo"),
   `Modelo (IC 95%)` = c(paste0("Curso 100% × 0% noturno: +", br(nt_pp), " pp (", br(nt_inf), " a ", br(nt_sup), ")"),
     paste0("RC ", co("p_escola_publica", 3), " por +10 pp"),
-    paste0("Ano × EAD: ", co("ano2021:modalidadeEAD"), " (2021) a ", co("ano2024:modalidadeEAD"), " (2024)"),
+    paste0("EAD/presencial (150 vínculos): ", br(e150[ano == 2020]$rc, 2), " em 2020 → ", e150[ano == 2024]$txt, " em 2024"),
     paste0("Federal ", co("categoria_administrativaPública Federal"), "; estadual ", co("categoria_administrativaPública Estadual")),
-    paste0("Saúde ", co("cine_area_geral09"), "; Engenharia ", co("cine_area_geral07"), "; TIC ", co("cine_area_geral06"), " (contra Negócios)"),
+    paste0("Saúde ", co("cine_area_geral09"), "; Agricultura ", co("cine_area_geral08"), "; TIC ", co("cine_area_geral06"), "; Serviços ", co("cine_area_geral10"), " (contra Negócios)"),
     "Não incluído no modelo"),
   `Base inferencial` = c("Sim; o efeito cai à metade com os controles", "Sim; efeito pequeno", "Sim; forte", "Sim",
-                         "Em parte; Engenharia e TIC invertem", "Não")), align = "lll")
+                         "Em parte; Saúde segue baixa, TIC cai abaixo de Negócios", "Não")), align = "lll")
 ```
 
 ```{r}
